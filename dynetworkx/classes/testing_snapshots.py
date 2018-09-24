@@ -37,14 +37,63 @@ for val in snaps:
     G = nx.from_numpy_matrix(val)
     graphs.append(G)
 
-snap_graph = SnapshotGraph()
+snap_graph = SnapshotGraph(name="NewFrat")
 for g in graphs:
     snap_graph.add_snapshot(g.edges(data=True))
 
-snap_graph.add_snapshot(graphs[len(graphs)-1].edges(data=True))
-snap_graph.add_snapshot(graphs[0].edges(data=True), num_in_seq=100)
+# set and read name of graph
+print(snap_graph.name)
+print(snap_graph)
+
+# Length
+print("len: {}".format(len(snap_graph)))
+
+# contains
+print("contains: {}".format(2 in snap_graph))
+
+# insert
 snap_graph.insert(graphs[1], snap_len=1, num_in_seq=40)
 
-print(len(snap_graph))
+# add snapshot
+snap_graph.add_snapshot(graphs[len(graphs)-1].edges(data=True))
+snap_graph.add_snapshot(graphs[0].edges(data=True), num_in_seq=100)
+
+# subgraph
+#sub1 = snap_graph.subgraph(nbunch=[1, 2])
+sub2 = snap_graph.subgraph(nbunch=[1, 2], sbunch=[3, 4])
+
+# degree
+print("deg: {}".format(snap_graph.degree(nbunch=[2, 3, 4])))
+print("deg: {}".format(snap_graph.degree(nbunch=[2, 3, 4], sbunch=[1, 2, 3, 4])))
+
+# number of nodes
+print("num nodes: {}".format(snap_graph.number_of_nodes(sbunch=[2, 3, 4])))
+
+# order
+print("order: {}".format(snap_graph.order(sbunch=[2, 3, 4])))
+
+# has node
+print("has node: {}".format(snap_graph.has_node(n=1, sbunch=[2, 3, 4])))
+
+# is multigraph
+print("multigraph: {}".format(snap_graph.is_multigraph(sbunch=[2, 3, 4])))
+
+# is directed
+print("is directed: {}".format(snap_graph.is_directed(sbunch=[2, 3, 4])))
+
+# to directed
+print("to directed: {}".format(snap_graph.to_directed(sbunch=[2, 3, 4])))
+
+# to undirected
+print("to undirected: {}".format(snap_graph.to_undirected(sbunch=[2, 3, 4])))
+
+# size
+print("size: {}".format(snap_graph.size(sbunch=[2, 3, 4])))
+
+# get
+print("get: {}".format(
+    nx.adjacency_matrix(snap_graph.get(sbunch=[4])[0])
+))
+
 
 print()

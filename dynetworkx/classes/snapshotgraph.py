@@ -467,6 +467,7 @@ class SnapshotGraph(object):
 
         Returns
         -------
+            List of nx.graph objects.
 
         """
         if sbunch:
