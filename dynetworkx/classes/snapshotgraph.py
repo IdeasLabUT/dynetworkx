@@ -42,29 +42,50 @@ class SnapshotGraph(object):
 
         Returns
         -------
-        nnodes : int
+        Number graphs in snapshot graph
             The number of snapshots in the graph.
 
-        @ Todo fix example
         Examples
         --------
+        >>> nxG1 = nx.Graph()
+        >>> nxG2 = nx.Graph()
+        >>>
+        >>> nxG1.add_edges_from([(1, 2), (1, 3)])
+        >>> nxG2.add_edges_from([(1, 4), (1, 3)])
+        >>>
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_nodes_from([2, 4, 5])
+        >>> G.insert(nxG1)
+        >>> G.insert(nxG2)
         >>> len(G)
-        3
+        2
 
         """
         return len(self.snapshots)
 
     def __contains__(self, graph):
-        """Return True if snap is a graph in the snapshot graph, False otherwise. Use: 'graph in G'.
+        """Return True if graph in the snapshot graph, False otherwise. Use: 'graph in G'.
 
-        @ todo fix example
+        Parameters
+        ----------
+        graph: networkx graph object
+            networkx graph to be looked for into snapshot graph.
+
+        Returns
+        -------
+        None
+
         Examples
         --------
+        >>> nxG1 = nx.Graph()
+        >>> nxG2 = nx.Graph()
+        >>>
+        >>> nxG1.add_edges_from([(1, 2), (1, 3)])
+        >>> nxG2.add_edges_from([(1, 4), (1, 3)])
+        >>>
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_node(2)
-        >>> 2 in G
+        >>> G.insert(nxG1)
+        >>> G.insert(nxG2)
+        >>> nxG1 in G
         True
         """
 
@@ -73,13 +94,12 @@ class SnapshotGraph(object):
         except TypeError:
             return False
 
-    def insert(self, g_to_insert, snap_len=None, num_in_seq=None):
-        """
-        Insert a graph into the snapshotgraph at a given index, with some snapshot length.
+    def insert(self, graph, snap_len=None, num_in_seq=None):
+        """Insert a graph into the snapshot graph, with options for inserting at a given index, with some snapshot length.
 
         Parameters
         ----------
-        g_to_insert: networkx graph object
+        graph: networkx graph object
             networkx graph to be inserted into snapshot graph.
         snap_len: Integer
             Length of the snapshot.
@@ -91,27 +111,43 @@ class SnapshotGraph(object):
         -------
         None
 
+        Examples
+        --------
+        >>> nxG1 = nx.Graph()
+        >>>
+        >>> nxG1.add_edges_from([(1, 2), (1, 3)])
+        >>>
+        >>> G = dnx.SnapshotGraph()
+        >>> G.insert(nxG1)
         """
         for _ in range(snap_len):
-            self.snapshots.insert(num_in_seq, g_to_insert)
+            self.snapshots.insert(num_in_seq, graph)
 
-    def add_snapshot(self, ebunch=None, graph=None, num_in_seq=None, weight='weight', **attr):
-        """
-        Add a snapshot with a bunch of edge values.
+    def add_snapshot(self, ebunch=None, graph=None, num_in_seq=None):
+        """Add a snapshot with a bunch of edge values.
 
         Parameters
         ----------
         ebunch : List of desired edges to add
-            Each edge in the ebunch list will be included to all added graphs
+            Each edge in the ebunch list will be included to all added graphs.
+        graph: networkx graph object
+            networkx graph to be inserted into snapshot graph.
+        num_in_seq: Integer
+            Time slot to begin insertion at.
 
         Returns
         -------
         None
 
+        Examples
+        --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+
         """
         if not graph:
             g = Graph()
-            g.add_weighted_edges_from(ebunch)
+            g.add_edges_from(ebunch)
         else:
             g = graph
 
@@ -125,9 +161,7 @@ class SnapshotGraph(object):
             self.insert(g, snap_len=1, num_in_seq=num_in_seq)
 
     def subgraph(self, nbunch=None, sbunch=None):
-        """
-        input a list of nodes and then parse all snapshots and return a snapshot graph of each snapshot only containing those nodes?
-        Nodes is a list of nodes that should be found in each subgraph
+        """Return a snapshot graph containing only the nodes in bunch, and snapshot indexes in sbunch.
 
         Parameters
         ----------
@@ -135,27 +169,35 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of subgraphs. It is highly recommended that this list is sequential,
             however it can be out of order.
-
         nbunch : List of desired nodes to add
-            Each node in the nbunch list will be included in all subgraphs indexed in sbunch
+            Each node in the nbunch list will be included in all subgraphs indexed in sbunch.
 
         Returns
         -------
-            List of tuples containing the degrees of each node in each snapshot.
+            SnapshotGraph
+                Contains only the nodes in bunch, and snapshot indexes in sbunch.
+        Examples
+        --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)])
+        >>> G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)])
+        >>> H = G.subgraph([4, 6])
+        >>> type(H)
+        <class 'snapshotgraph.SnapshotGraph'>
+        >>> list(H.get([0])[0].edges(data=True))
+        [(4, 6, {})]
         """
 
         if sbunch:
+            if len(sbunch) != len(nbunch):
+                raise ValueError(
+                    'node list({}) must be equal in length to number of desired snapshots({})'.format(len(nbunch),
+                                                                                                      len(sbunch)))
             min_index = min(sbunch)
             max_index = max(sbunch)
         else:
             min_index = 0
             max_index = len(self.snapshots)
-
-        #if not sbunch or not nbunch:
-        #    raise ValueError('node list({}) and snapshot list({}) must be defined.'.format(nbunch, sbunch))
-
-        if len(sbunch) != len(nbunch):
-            raise ValueError('node list({}) must be equal in length to number of desired snapshots({})'.format(len(nbunch), len(sbunch)))
 
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
@@ -164,19 +206,14 @@ class SnapshotGraph(object):
 
         subgraph = SnapshotGraph()
 
-        if (len(nbunch) == 1) and (max_index - min_index) > 1:
-            for snapshot in graph_list:
-                subgraph.add_snapshot(graph=snapshot.subgraph(nbunch))
+        for snapshot in graph_list:
+            subgraph.add_snapshot(graph=snapshot.subgraph(nbunch))
+        subgraph.graph = self.graph
 
-        else:
-            for snapshot, node_list in zip(graph_list, nbunch):
-                subgraph.add_snapshot(graph=snapshot.subgraph(node_list))
-            subgraph.graph = self.graph
         return subgraph
 
     def degree(self, sbunch=None, nbunch=None, weight=None):
-        """
-        Return a list of tuples containing the degrees of each node in each snapshot
+        """Return a list of tuples containing the degrees of each node in each snapshot
 
         Parameters
         ----------
@@ -192,6 +229,16 @@ class SnapshotGraph(object):
         Returns
         -------
             List of DegreeView objects containing the degree of each node, indexed by requested snapshot.
+
+        Examples
+        --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.degree(sbunch=[1])
+        [DegreeView({1: 2, 4: 1, 3: 1})]
+        >>> G.degree(nbunch=[1, 2])
+        [DegreeView({1: 2, 2: 1}), DegreeView({1: 2})]
         """
         # returns a list of degrees for each graph snapshot in snapshots
         # use generator to create list of degrees
@@ -203,7 +250,7 @@ class SnapshotGraph(object):
             max_index = len(self.snapshots)
 
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:(max_index+1)]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -230,6 +277,8 @@ class SnapshotGraph(object):
         -------
             A list of of the number of nodes in each requested snapshot.
 
+        Examples
+        --------
         """
         # returns a list of the number of nodes in each graph in the range
         if sbunch:
@@ -259,6 +308,9 @@ class SnapshotGraph(object):
         Returns
         -------
             A list of the orders of each snapshot
+
+        Examples
+        --------
 
         """
         # returns a list of the order of the graph in the range
@@ -290,9 +342,10 @@ class SnapshotGraph(object):
             that this list is sequential, however it can be out of order.
 
         Returns
-
         -------
 
+        Examples
+        --------
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -320,6 +373,9 @@ class SnapshotGraph(object):
 
         Returns
         -------
+
+        Examples
+        --------
 
         """
         # returns a list of the order of the graph in the range
@@ -349,6 +405,9 @@ class SnapshotGraph(object):
         Returns
         -------
 
+
+        Examples
+        --------
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -377,6 +436,9 @@ class SnapshotGraph(object):
         Returns
         -------
 
+
+        Examples
+        --------
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -404,6 +466,9 @@ class SnapshotGraph(object):
 
         Returns
         -------
+
+        Examples
+        --------
 
         """
         # returns a list of the order of the graph in the range
@@ -439,6 +504,9 @@ class SnapshotGraph(object):
         -------
         List of
 
+        Examples
+        --------
+
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -469,6 +537,9 @@ class SnapshotGraph(object):
         -------
             List of nx.graph objects.
 
+        Examples
+        --------
+
         """
         if sbunch:
             min_index = min(sbunch)
@@ -498,6 +569,9 @@ class SnapshotGraph(object):
         Returns
         -------
             List of tuples containing the degrees of each node in each snapshot
+
+        Examples
+        --------
         """
         if sbunch:
             min_index = min(sbunch)
@@ -529,6 +603,9 @@ class SnapshotGraph(object):
         Returns
         -------
             List of tuples containing the degrees of each node in each snapshot
+
+        Examples
+        --------
         """
         if sbunch:
             min_index = min(sbunch)
