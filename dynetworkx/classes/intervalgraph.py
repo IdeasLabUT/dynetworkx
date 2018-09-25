@@ -713,13 +713,15 @@ class IntervalGraph(object):
         >>> G.has_edge(1, 2)
         True
 
-        With specific overlapping interval
+        With specific overlapping interval:
+        
         >>> G.has_edge(1, 2, begin=2)
         True
         >>> G.has_edge(2, 4, begin=12)
         False
 
-        Exact interval match
+        Exact interval match:
+
         >>> G.has_edge(2, 4, begin=1, end=11)
         True
         >>> G.has_edge(2, 4, begin=2, end=11)
@@ -792,12 +794,14 @@ class IntervalGraph(object):
         Examples
         --------
         To get a list of all edges:
+
         >>> G = dnx.IntervalGraph()
         >>> G.add_edges_from([(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)])
         >>> G.edges()
         [Interval(8, 15, (2, 4)), Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4)), Interval(12, 19, (6, 4))]
 
         To get edges which appear in a specific interval:
+
         >>> G.edges(begin=10)
         [Interval(12, 19, (6, 4)), Interval(1, 11, (2, 4)), Interval(8, 15, (2, 4))]
         >>> G.edges(end=5)
@@ -806,6 +810,7 @@ class IntervalGraph(object):
         [Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4))]
 
         To get edges with either of the two nodes being defined:
+
         >>> G.edges(u=2)
         [Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4)), Interval(8, 15, (2, 4))]
         >>> G.edges(u=2, begin=11)
@@ -816,6 +821,7 @@ class IntervalGraph(object):
         []
 
         To get a list of edges with data:
+
         >>> G = dnx.IntervalGraph()
         >>> G.add_edge(1, 3, 1, 4, weight=8, height=18)
         >>> G.add_edge(1, 2, 3, 10, weight=10)
@@ -909,6 +915,7 @@ class IntervalGraph(object):
         False
 
         With specific overlapping interval
+
         >>> G = dnx.IntervalGraph()
         >>> G.add_edges_from([(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 5, 9), (1, 2, 8, 15)])
         >>> G.remove_edge(1, 2, begin=2, end=4)
@@ -918,6 +925,7 @@ class IntervalGraph(object):
         True
 
         Exact interval match
+
         >>> G.remove_edge(2, 4, begin=1, end=11, overlapping=False)
         >>> G.has_edge(2, 4, begin=1, end=11)
         False

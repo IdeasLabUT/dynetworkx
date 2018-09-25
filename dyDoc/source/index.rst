@@ -40,12 +40,12 @@ recommend the `Python documentation <https://docs.python.org/3/>`_.
 Free software
 -------------
 
-MIT standard licence. More information can be found under Licence.
+Released under the 3-Clause BSD license. More information can be found under Licence.
 
 History
 -------
 
-DyNetworkX is developed by IDEASLab @ The University of Toledo.
+DyNetworkX is developed by IDEAS Lab @ The University of Toledo.
 
 Documentation
 -------------

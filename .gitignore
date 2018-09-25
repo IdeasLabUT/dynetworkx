@@ -14,6 +14,8 @@ doc/ghpages_build
 .coverage
 *.class
 
+datasets/*
+
 # Generated while building documentation.
 doc/auto_examples
 doc/modules

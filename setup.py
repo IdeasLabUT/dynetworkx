@@ -62,7 +62,8 @@ docdirbase = 'share/doc/networkx-%s' % version
 # add basic documentation
 data = [(docdirbase, glob("*.txt"))]
 # add examples
-for d in ['advanced',
+for d in ['.',
+          'advanced',
           'algorithms',
           'basic',
           '3d_drawing',
@@ -74,11 +75,16 @@ for d in ['advanced',
           'subclass']:
     dd = os.path.join(docdirbase, 'examples', d)
     pp = os.path.join('examples', d)
+    data.append((dd, glob(os.path.join(pp, "*.txt"))))
     data.append((dd, glob(os.path.join(pp, "*.py"))))
     data.append((dd, glob(os.path.join(pp, "*.bz2"))))
     data.append((dd, glob(os.path.join(pp, "*.gz"))))
     data.append((dd, glob(os.path.join(pp, "*.mbox"))))
     data.append((dd, glob(os.path.join(pp, "*.edgelist"))))
+# add js force examples
+dd = os.path.join(docdirbase, 'examples', 'javascript/force')
+pp = os.path.join('examples', 'javascript/force')
+data.append((dd, glob(os.path.join(pp, "*"))))
 
 # add the tests
 package_data = {
@@ -110,9 +116,21 @@ package_data = {
     'networkx.utils': ['tests/*.py']
 }
 
-install_requires = ['decorator>=4.1.0']
+install_requires = ['decorator>=4.3.0']
 extras_require = {'all': ['numpy', 'scipy', 'pandas', 'matplotlib',
-                          'pygraphviz', 'pydot', 'pyyaml', 'gdal', 'lxml']}
+                          'pygraphviz', 'pydot', 'pyyaml', 'gdal', 'lxml',
+                          'nose'],
+                  'gdal': ['gdal'],
+                  'lxml': ['lxml'],
+                  'matplotlib': ['matplotlib'],
+                  'nose': ['nose'],
+                  'numpy': ['numpy'],
+                  'pandas': ['pandas'],
+                  'pydot': ['pydot'],
+                  'pygraphviz': ['pygraphviz'],
+                  'pyyaml': ['pyyaml'],
+                  'scipy': ['scipy']
+                 }
 
 if __name__ == "__main__":
 
@@ -137,6 +155,6 @@ if __name__ == "__main__":
         install_requires=install_requires,
         extras_require=extras_require,
         test_suite='nose.collector',
-        tests_require=['nose>=0.10.1'],
+        tests_require=['nose>=1.3.7'],
         zip_safe=False
     )

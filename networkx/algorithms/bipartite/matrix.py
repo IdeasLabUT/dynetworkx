@@ -11,7 +11,6 @@ Biadjacency matrices
 #    All rights reserved.
 #    BSD license.
 import itertools
-from networkx.convert import _prep_create_using
 from networkx.convert_matrix import _generate_weighted_edges
 import networkx as nx
 __author__ = """\n""".join(['Jordi Torrents <jtorrents@milnou.net>',
@@ -108,7 +107,9 @@ def biadjacency_matrix(G, row_order, column_order=None,
                           shape=(nlen, mlen), dtype=dtype)
     try:
         return M.asformat(format)
-    except AttributeError:
+    # From Scipy 1.1.0, asformat will throw a ValueError instead of an
+    # AttributeError if the format if not recognized.
+    except (AttributeError, ValueError):
         raise nx.NetworkXError("Unknown sparse matrix format: %s" % format)
 
 
@@ -148,7 +149,7 @@ def from_biadjacency_matrix(A, create_using=None, edge_attribute='weight'):
     ----------
     [1] https://en.wikipedia.org/wiki/Adjacency_matrix#Adjacency_matrix_of_a_bipartite_graph
     """
-    G = _prep_create_using(create_using)
+    G = nx.empty_graph(0, create_using)
     n, m = A.shape
     # Make sure we get even the isolated nodes of the graph.
     G.add_nodes_from(range(n), bipartite=0)
