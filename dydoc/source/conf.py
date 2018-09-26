@@ -64,9 +64,9 @@ author = 'Makan Arastuie'
 # built documents.
 #
 # The short X.Y version.
-version = '1.0'
+version = '0.1'
 # The full version, including alpha/beta/rc tags.
-release = '1.0'
+release = '0.1'
 
 # A list of prefixs that are ignored when creating the module index. (new in Sphinx 0.6)
 modindex_common_prefix = ['dynetworkx.']

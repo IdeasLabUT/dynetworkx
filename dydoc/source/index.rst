@@ -58,6 +58,7 @@ Documentation
    :maxdepth: 2
 
    install
+   tutorial
    download
    reference/index
    developer

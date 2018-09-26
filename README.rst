@@ -35,7 +35,7 @@ recommend the `Python documentation <https://docs.python.org/3/>`_.
 License
 -------
 
-Released under the 3-Clause BSD license (see `dyDoc/source/license.rst`)::
+Released under the 3-Clause BSD license (see `dydoc/source/license.rst`)::
 
    Copyright (C) 2018 IDEASLab @ The University of Toledo.
 
