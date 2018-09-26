@@ -2,7 +2,7 @@
 
 Install
 =======
-Just like NetworkX, DyNetworkX requires Python 2.7, 3.4, 3.5, or 3.6.
+Just like NetworkX, DyNetworkX requires Python 3.4, 3.5, or 3.6.
 
 Below we assume you have the default Python environment already configured on
 your computer and you intend to install ``networkx`` inside of it.  If you want
