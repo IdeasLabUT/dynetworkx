@@ -54,8 +54,8 @@ class SnapshotGraph(object):
         >>> nxG2.add_edges_from([(1, 4), (1, 3)])
         >>>
         >>> G = dnx.SnapshotGraph()
-        >>> G.insert(nxG1)
-        >>> G.insert(nxG2)
+        >>> G.add_snapshot(graph=nxG1)
+        >>> G.add_snapshot(graph=nxG2)
         >>> len(G)
         2
 
@@ -83,8 +83,8 @@ class SnapshotGraph(object):
         >>> nxG2.add_edges_from([(1, 4), (1, 3)])
         >>>
         >>> G = dnx.SnapshotGraph()
-        >>> G.insert(nxG1)
-        >>> G.insert(nxG2)
+        >>> G.add_snapshot(graph=nxG1)
+        >>> G.add_snapshot(graph=nxG2)
         >>> nxG1 in G
         True
         """
@@ -120,6 +120,9 @@ class SnapshotGraph(object):
         >>> G = dnx.SnapshotGraph()
         >>> G.insert(nxG1)
         """
+        if not snap_len:
+            snap_len = 1
+
         for _ in range(snap_len):
             self.snapshots.insert(num_in_seq, graph)
 
@@ -301,7 +304,8 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.number_of_nodes() for g in graph_list]
 
@@ -324,10 +328,10 @@ class SnapshotGraph(object):
         >>> G = dnx.SnapshotGraph()
         >>> G.add_snapshot([(1, 2), (1, 3)])
         >>> G.add_snapshot([(1, 4), (1, 3)])
-        >>> G.number_of_nodes(sbunch=[1])
+        >>> G.order(sbunch=[1])
         [3]
-        >>> G.number_of_nodes(sbunch=[0, 1])
-        [3, 3
+        >>> G.order(sbunch=[0, 1])
+        [3, 3]
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -339,19 +343,18 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.order() for g in graph_list]
 
     def has_node(self, n, sbunch=None):
-        """
-        Gets boolean list of if a snapshot in 'sbunch' contains node 'n'.
+        """Gets boolean list of if a snapshot in 'sbunch' contains node 'n'.
 
         Parameters
         ----------
         n: networkx node object
             node to be checked for in requested snapshots
-
         sbunch : List of indexes for desired snapshots, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of if the snapshot graph includes the node. It is highly recommended
@@ -359,9 +362,18 @@ class SnapshotGraph(object):
 
         Returns
         -------
+            List of boolean values if index in sbunch contains n.
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.has_node(1, sbunch=[1])
+        [True]
+        >>> G.has_node(1)
+        [True, True]
+
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -373,12 +385,13 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.has_node(n) for g in graph_list]
 
     def is_multigraph(self, sbunch=None):
-        """
+        """Returns a list of boolean values for if the graph at the index is a multigraph.
 
         Parameters
         ----------
@@ -389,9 +402,17 @@ class SnapshotGraph(object):
 
         Returns
         -------
+            List of boolean values if index in sbunch is a multigraph.
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.is_multigraph(sbunch=[0, 1])
+        [False]
+        >>> G.is_multigraph()
+        [False, False]
 
         """
         # returns a list of the order of the graph in the range
@@ -404,12 +425,13 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.is_multigraph() for g in graph_list]
 
     def is_directed(self, sbunch=None):
-        """
+        """Returns a list of boolean values for if the graph at the index is a directed graph.
 
         Parameters
         ----------
@@ -420,10 +442,18 @@ class SnapshotGraph(object):
 
         Returns
         -------
-
+            List of boolean values if index in sbunch is a directed graph.
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.is_directed(sbunch=[0, 1])
+        [False]
+        >>> G.is_directed()
+        [False, False]
+
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -435,12 +465,13 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.is_directed() for g in graph_list]
 
     def to_directed(self, sbunch=None):
-        """
+        """Returns a list of networkx directed graph objects.
 
         Parameters
         ----------
@@ -451,10 +482,16 @@ class SnapshotGraph(object):
 
         Returns
         -------
-
+            List of networkx directed graph objects.
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.to_directed(sbunch=[0, 1])
+        [<networkx.classes.digraph.DiGraph object at 0x7f1a6de49dd8>, <networkx.classes.digraph.DiGraph object at 0x7f1a6de49e10>]
+
         """
         # returns a list of the order of the graph in the range
         if sbunch:
@@ -466,12 +503,13 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.to_directed() for g in graph_list]
 
     def to_undirected(self, sbunch=None):
-        """
+        """Returns a list of networkx graph objects.
 
         Parameters
         ----------
@@ -482,11 +520,18 @@ class SnapshotGraph(object):
 
         Returns
         -------
+            List of networkx graph objects.
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.to_directed(sbunch=[0, 1])
+        [<networkx.classes.graph.Graph object at 0x7ff532219e10>, <networkx.classes.graph.Graph object at 0x7ff532219e48>]
 
         """
+
         # returns a list of the order of the graph in the range
         if sbunch:
             min_index = min(sbunch)
@@ -497,13 +542,13 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.to_undirected() for g in graph_list]
 
     def size(self, sbunch=None, weight=None):
-        """
-        Returns the size of each graph index as specified in sbunch as a list.
+        """Returns the size of each graph index as specified in sbunch as a list.
 
         Parameters
         ----------
@@ -511,17 +556,23 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of sizes. It is highly recommended that this list is sequential,
             however it can be out of order.
-
-        Parameters
-        ----------
-        weight
+        weight : string, optional (default=None)
+            The edge attribute that holds the numerical value used as a weight.
+            If None, then each edge has weight 1.
 
         Returns
         -------
-        List of
+            List of sizes of each graph indexed in sbunch.
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.size(sbunch=[0, 1])
+        [2, 2]
+        >>> G.size()
+        [2, 2]
 
         """
         # returns a list of the order of the graph in the range
@@ -534,13 +585,13 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         return [g.size(weight=weight) for g in graph_list]
 
     def get(self, sbunch=None):
-        """
-        Gets all graphs in snapshot graph specified in sbunch.
+        """Returns a list of graphs specified in sbunch.
 
         Parameters
         ----------
@@ -555,6 +606,13 @@ class SnapshotGraph(object):
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.get(sbunch=[0])
+        [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>]
+        >>> G.get()
+        [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
 
         """
         if sbunch:
@@ -566,7 +624,9 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
+
         return graph_list
 
     def add_nodes_from(self, nbunch, sbunch=None, **attrs):
@@ -587,6 +647,28 @@ class SnapshotGraph(object):
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+
+        >>> G.add_nodes_from([5, 6, 7], [0])
+        >>> G.add_nodes_from([8, 9, 10, 11], [1])
+        >>> nx.adjacency_matrix(G.get()[0]).todense()
+        [[0 1 1 0 0 0]
+         [1 0 0 0 0 0]
+         [1 0 0 0 0 0]
+         [0 0 0 0 0 0]
+         [0 0 0 0 0 0]
+         [0 0 0 0 0 0]]
+        >>> nx.adjacency_matrix(G.get()[1]).todense()
+        [[0 1 1 0 0 0 0]
+         [1 0 0 0 0 0 0]
+         [1 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0]
+         [0 0 0 0 0 0 0]]
+
         """
         if sbunch:
             min_index = min(sbunch)
@@ -597,7 +679,8 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         for g in graph_list:
                 g.add_nodes_from(nbunch, **attrs)
@@ -614,13 +697,38 @@ class SnapshotGraph(object):
             of node degrees. It is highly recommended that this list is sequential,
             however it can be out of order.
 
-
         Returns
         -------
         None
 
         Examples
         --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)])
+
+        >>> G.add_edges_from([(5, 6), (7, 6)], [0])
+        >>> G.add_edges_from([(8, 9), (10, 11)], [0, 1])
+        >>> nx.adjacency_matrix(G.get()[0]).todense()
+        [[0 1 1 0 0 0 0 0 0 0]
+         [1 0 0 0 0 0 0 0 0 0]
+         [1 0 0 0 0 0 0 0 0 0]
+         [0 0 0 0 1 0 0 0 0 0]
+         [0 0 0 1 0 1 0 0 0 0]
+         [0 0 0 0 1 0 0 0 0 0]
+         [0 0 0 0 0 0 0 1 0 0]
+         [0 0 0 0 0 0 1 0 0 0]
+         [0 0 0 0 0 0 0 0 0 1]
+         [0 0 0 0 0 0 0 0 1 0]]
+        >>> nx.adjacency_matrix(G.get()[1]).todense()
+        [[0 1 1 0 0 0 0]
+         [1 0 0 0 0 0 0]
+         [1 0 0 0 0 0 0]
+         [0 0 0 0 1 0 0]
+         [0 0 0 1 0 0 0]
+         [0 0 0 0 0 0 1]
+         [0 0 0 0 0 1 0]]
+
         """
         if sbunch:
             min_index = min(sbunch)
@@ -631,7 +739,8 @@ class SnapshotGraph(object):
         # get all indexes between min and max
         graph_list = self.snapshots[min_index:max_index+1]
         # only get the indexes wanted
-        graph_list = [graph_list[index - min_index] for index in sbunch]
+        if sbunch:
+            graph_list = [graph_list[index - min_index] for index in sbunch]
 
         for g in graph_list:
                 g.add_edges_from(ebunch, **attrs)
