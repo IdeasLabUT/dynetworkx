@@ -31,7 +31,7 @@ a customized node object, etc.
 Nodes
 -----
 
-Using DyNetworkX's :class:`IntervalGraph.load_from_txt` method, the graph
+Using DyNetworkX's :meth:`IntervalGraph.load_from_txt` method, the graph
 ``IG`` can be grown by importing an existing network. However, we first
 look at simple ways to manipulate an interval graph. The simplest
 form is adding a single node,
@@ -54,7 +54,7 @@ This flexibility is very powerful as it allows graphs of graphs, graphs
 of files, graphs of functions and much more. It is worth thinking
 about how to structure your application so that the nodes are
 useful entities.  Of course you can always use a unique
-identifier in ``IG``and have a separate dictionary
+identifier in ``IG`` and have a separate dictionary
 keyed by identifier to the node information if
 you prefer.
 
@@ -82,7 +82,7 @@ by adding a list of edges,
 
     >>> IG.add_edges_from([(1, 2, 2, 6), (1, 3, 6, 9)])
 
-or by adding any :term:`ebunch` of edges. An *ebunch* is any iterable container of
+or by adding any `ebunch` of edges. An *ebunch* is any iterable container of
 interval edge-tuples. An interval edge-tuple is a 4-tuple of nodes and intervals.
 
 .. note:: In above example it is worth noting that the two added interval edges,
@@ -106,7 +106,7 @@ At this stage the interval graph ``IG`` consist of 4 nodes and 4 edges,
    4
 
 We can examine the nodes and edges. Two basic grpah properties facilitate reporting:
-:class:`IntervalGraph.nodes()` and :class:`IntervalGraph.edges()`. These are lists
+:meth:`IntervalGraph.nodes()` and :meth:`IntervalGraph.edges()`. These are lists
 of the nodes and interval edges. They offer a continually updated read-only view
 into the graph structure.
 
@@ -131,9 +131,37 @@ Using this method you have access to 4 constraints in order to restrict your que
    >>> IG.edges(1, 2, 5, 6) # all edges between nodes 1 and 2 which have an overlapping interval with [5, 6)
    [Interval(2, 6, (1, 2))]
 
+One can also take advantage of this method to obtain more information such as
+`degree`. Since in an interval graph these parameters change depending on
+the interval in question, you need to adjust your query.
+
+Accessing `degree` of a node:
+
+   >>> len(IG.edges(u=1)) # total number of edges associated with node 1 over the entire interval
+   3
+   >>> len(IG.edges(u=1, begin=2, end=4)) # Adding interval restriction
+   2
+
+Keep in mind that ``end`` is non-inclusive. Thus, depening on what time increment you use
+to define your interval, if you set ``end = begin + smallest_increment`` it will
+return all the edges which are present at time ``begin``.
+
+   >>> len(IG.edges(u=1, begin=5, end=6))
+   1
+
+If you are using a truly continuous time interval, you can add your machine epsilon to
+``begin`` to achieve the same result. As an example:
+
+   >>> import numpy as np
+   >>> eps = np.finfo(np.float64).eps
+   >>> begin = 5
+   >>> IG.edges(u=1, begin=begin, end=begin + eps)
+   [Interval(2, 6, (1, 2))]
+
+
 As it is shown, ``IG.edges()`` is a powerful method to query the network for edges.
-You can also take advantage of :class:`IntervalGraph.has_node()` and
-:class:`IntervalGraph.has_edge()` as it is shown below,
+You can also take advantage of :meth:`IntervalGraph.has_node()` and
+:meth:`IntervalGraph.has_edge()` as it is shown below,
 
    >>> IG.has_node(3)
    True
@@ -155,4 +183,87 @@ You can also take advantage of :class:`IntervalGraph.has_node()` and
    True
    >>> IG.has_edge(2, 3, 3, 7, overlapping=False) # setting overlapping=False, searches for an exact interval match
    False
+
+One can remove nodes and edges from the graph in a similar fashion to adding.
+by using :meth:`IntervalGraph.remove_node` and
+:meth:`IntervalGraph.remove_edge`, e.g.
+
+   >>> IG.remove_node(H)
+   [1, 2, 3]
+   >>> IG.remove_edge(1, 3, 6, 9, overlapping=False)
+   >>> IG.edges()
+   [Interval(2, 5, (2, 3)), Interval(2, 6, (1, 2)), Interval(1, 4, (1, 2))]
+
+
+What to use as nodes and edges
+------------------------------
+Just like NetworkX, DyNetworkX does not have a specific type for nodes an edges.
+This allows you to represent nodes and edges with any hashable object to add
+more depth and meanning to your interval graph. The most common choices are
+numbers or strings, but a node can be any hashable object (except ``None``),
+and an edge can be associated with any object ``x`` using
+``IG.add_edge(n1, n2, begin, end, object=x)``.
+
+As an example, ``n1`` and ``n2`` could be real people's profile url or a
+custom python object and ``x`` can be another python object which
+describes the detail of their contact. This way, you are not
+bound to only associating weights with the edges.
+
+Based on the NetworkX's experience, this is quite useful, but its abuse
+can lead to unexpected surprises unless on is familiar with Python.
+
+Adding attributes to graphs, nodes, and edges
+---------------------------------------------
+Attributes such as weights, labels, colors, or whatever Python object you like,
+can be attached to graphs, nodes, or edges.
+
+Each graph, node, and edge can hold key/value attribute pairs in an associated
+attribute dictionary (the keys must be hashable).  By default these are empty,
+but attributes can be added or changed using ``add_edge``, ``add_node``.
+
+Graph attributes
+~~~~~~~~~~~~~~~~
+
+Assign graph attributes when creating a new graph
+
+    >>> IG = dnx.IntervalGraph(state='Ohio')
+    >>> IG.graph
+    {'state': 'Ohio'}
+
+Or you can  modify attributes later
+
+   >>> IG.graph['state'] = 'Michigan'
+   >>> IG.graph
+   {'state': 'Michigan'}
+
+There is also an spacial attribute for interval graphs called ``name``. You
+can either set it just like any other attribute or you can take advantage
+of the ``IG.name`` property:
+
+   >>> IG.name = "USA"
+   >>> IG.name
+   USA
+
+Node attributes
+~~~~~~~~~~~~~~~
+
+Add node attributes using ``add_node()`` or ``add_nodes_from()``,
+
+    >>> IG.add_node(1, time='5pm', day="Friday") # Adds node 1 and sets its two attributes
+    >>> IG.add_nodes_from([2, 3], time='2pm') # Adds nodes 2 and 3 and sets both of their 'time' attributes to '2pm'
+    >>> IG.add_node(1, time='10pm') # Updates node 1's 'time' attribute to '10pm'
+
+Note that you can update a node's attribute by adding the node and setting a new value for its attribute.
+
+
+Edge attributes
+~~~~~~~~~~~~~~~
+
+Similarly, add/change edge attributes using ``add_edge()`` or ``add_edges_from()``,
+
+   >>> G.add_edge(1, 2, 4, 6, contact_type='call') # Adds the edge and sets its 'contact_type' attribute.
+   >>> G.add_edges_from([(3, 4, 1, 5), (1, 2, 4, 6)], weight=5.8)
+   >>> G.add_edge(1, 2, 4, 6, weight=6.6) # Updates the weight attribute of the edge.
+
+Note that updating an edge's attribute is similar to updating nodes' attributes.
 

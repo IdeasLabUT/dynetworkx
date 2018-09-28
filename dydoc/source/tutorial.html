@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.13.1: http://docutils.sourceforge.net/" />
+<title>Tutorial</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 7952 2016-07-26 18:15:59Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+.subscript {
+  vertical-align: sub;
+  font-size: smaller }
+
+.superscript {
+  vertical-align: super;
+  font-size: smaller }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title, .code .error {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left, table.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right, table.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+table.align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: inherit }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+.align-top    {
+  vertical-align: top }
+
+.align-middle {
+  vertical-align: middle }
+
+.align-bottom {
+  vertical-align: bottom }
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="tutorial">
+<h1 class="title">Tutorial</h1>
+
+<!-- -*- coding: utf-8 -*- -->
+<div class="system-message">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 6)</p>
+<p>Unknown directive type &quot;currentmodule&quot;.</p>
+<pre class="literal-block">
+.. currentmodule:: dynetworkx
+
+</pre>
+</div>
+<p>This guide can help you start working with IntervalGraph module of DyNetworkX.</p>
+<p><strong>Disclaimer:</strong>
+this tutorial, similar to DyNetworkX itself, is heavily influenced by NetworkX's tutorial.
+This is done on purpose, in order to point out the similarities between the two packages.</p>
+<div class="section" id="creating-an-interval-graph">
+<h1>Creating an interval graph</h1>
+<p>Create an empty interval graph with no nodes and no edges.</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; import dynetworkx as dnx
+&gt;&gt;&gt; IG = dnx.IntervalGraph()
+</pre>
+</blockquote>
+<p>By definition, an <a href="#id1"><span class="problematic" id="id2">:class:`IntervalGraph`</span></a> is a collection of nodes (vertices) along with
+identified pairs of nodes (called interval edges, edges, links, etc) each of which is
+coupled with a given interval. In DyNetworkX, just like NetworkX, nodes can be any
+hashable object e.g., a text string, an image, an XML object, another Graph,
+a customized node object, etc.</p>
+<div class="system-message" id="id1">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 22); <em><a href="#id2">backlink</a></em></p>
+Unknown interpreted text role &quot;class&quot;.</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Python's <tt class="docutils literal">None</tt> object should not be used as a node as it determines
+whether optional function arguments have been assigned in many functions.</p>
+</div>
+</div>
+<div class="section" id="nodes">
+<h1>Nodes</h1>
+<p>Using DyNetworkX's <a href="#id3"><span class="problematic" id="id4">:meth:`IntervalGraph.load_from_txt`</span></a> method, the graph
+<tt class="docutils literal">IG</tt> can be grown by importing an existing network. However, we first
+look at simple ways to manipulate an interval graph. The simplest
+form is adding a single node,</p>
+<div class="system-message" id="id3">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 34); <em><a href="#id4">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.add_node(1)
+</pre>
+</blockquote>
+<p>add alist of nodes,</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.add_nodes_from([2, 3])
+</pre>
+</blockquote>
+<p>or add any iterable container of nodes. You can also add nodes along with node
+attributes if your container yields 2-tuples (node, node_attribute_dict).
+Node attributes are discussed further below.</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; H = dnx.IntervalGraph()
+&gt;&gt;&gt; IG.add_node(H)
+</pre>
+</blockquote>
+<p>Note that interval graph <tt class="docutils literal">IG</tt> now contains interval graph <tt class="docutils literal">H</tt> as a node.
+This flexibility is very powerful as it allows graphs of graphs, graphs
+of files, graphs of functions and much more. It is worth thinking
+about how to structure your application so that the nodes are
+useful entities.  Of course you can always use a unique
+identifier in <a href="#id5"><span class="problematic" id="id6">``</span></a>IG``and have a separate dictionary
+keyed by identifier to the node information if
+you prefer.</p>
+<div class="system-message" id="id5">
+<p class="system-message-title">System Message: WARNING/2 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 52); <em><a href="#id6">backlink</a></em></p>
+Inline literal start-string without end-string.</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You should not change the node object if the hash depends
+on its contents.</p>
+</div>
+</div>
+<div class="section" id="edges">
+<h1>Edges</h1>
+<p>Edges are what make an interval graph possible. Every edge is defined by 2 nodes, the
+inclusive beginning of the interval when the edge first appears and its
+non-inclusive end. beginning of an interval must be strictly smaller
+than its end and both can be of any orderable types.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In this tutotial as well as IntervalGraph documentation, the two terms <tt class="docutils literal">edge</tt>
+and <tt class="docutils literal">interval edge</tt> are used interchangeably.</p>
+</div>
+<p><tt class="docutils literal">IG</tt> can also be grown by adding one edge at a time,</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.add_edge(1, 2, 1, 4)
+&gt;&gt;&gt; ie = (2, 3, 2, 5)
+&gt;&gt;&gt; IG.add_edge(*ie) # unpack interval edge tuple*
+</pre>
+</blockquote>
+<p>by adding a list of edges,</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.add_edges_from([(1, 2, 2, 6), (1, 3, 6, 9)])
+</pre>
+</blockquote>
+<p>or by adding any <a href="#id7"><span class="problematic" id="id8">:term:`ebunch`</span></a> of edges. An <em>ebunch</em> is any iterable container of
+interval edge-tuples. An interval edge-tuple is a 4-tuple of nodes and intervals.</p>
+<div class="system-message" id="id7">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 85); <em><a href="#id8">backlink</a></em></p>
+Unknown interpreted text role &quot;term&quot;.</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In above example it is worth noting that the two added interval edges,
+<tt class="docutils literal">(1, 2, 1, 4)</tt> and <tt class="docutils literal">(1, 2, 2, 6)</tt> are two different interval edges,
+since they exists on different interval.</p>
+</div>
+<p>If a new interval edge is to be added with nodes that are not currently in the
+interval graph, nodes will be added automatically.</p>
+<p>There are no complaints when adding existing nodes or edges. As we add new
+nodes/edges, DyNetworkX quietly ignores any that are already present.</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.add_edge(1, 2, 1, 4)
+&gt;&gt;&gt; IG.add_node(1)
+</pre>
+</blockquote>
+<p>At this stage the interval graph <tt class="docutils literal">IG</tt> consist of 4 nodes and 4 edges,</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.number_of_nodes()
+4
+&gt;&gt;&gt; len(IG.edges())
+4
+</pre>
+</blockquote>
+<p>We can examine the nodes and edges. Two basic grpah properties facilitate reporting:
+<a href="#id9"><span class="problematic" id="id10">:meth:`IntervalGraph.nodes()`</span></a> and <a href="#id11"><span class="problematic" id="id12">:meth:`IntervalGraph.edges()`</span></a>. These are lists
+of the nodes and interval edges. They offer a continually updated read-only view
+into the graph structure.</p>
+<div class="system-message" id="id9">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 108); <em><a href="#id10">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<div class="system-message" id="id11">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 108); <em><a href="#id12">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.nodes()
+[1, 2, 3, &lt;dynetworkx.classes.intervalgraph.IntervalGraph object at 0x100000000&gt;]
+</pre>
+</blockquote>
+<p><tt class="docutils literal">IG.edges()</tt> is an extremely flexible and useful method to query the interval
+graph for various interval edges. It returns a list of Interval objects which
+are in the form <tt class="docutils literal">Interval(begin, end, (node_1, node_2)</tt>.</p>
+<p>Using this method you have access to 4 constraints in order to restrict your query.
+<cite>u</cite>, <cite>v</cite>, <cite>begin</cite> and <cite>end</cite>. Defining any of them narrows down your query.</p>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.edges() # returns a list of all edges
+[Interval(6, 9, (1, 3)), Interval(2, 5, (2, 3)), Interval(2, 6, (1, 2)), Interval(1, 4, (1, 2))]
+&gt;&gt;&gt; IG.edges(begin=5) # all edges which have an overlapping interval with interval [5, end of the interval graph]
+[Interval(6, 9, (1, 3)), Interval(2, 6, (1, 2))]
+&gt;&gt;&gt; IG.edges(end=3) # all edges which have an overlapping interval with interval [beginning of the interval graph, 3)
+[Interval(2, 5, (2, 3)), Interval(2, 6, (1, 2)), Interval(1, 4, (1, 2))]
+&gt;&gt;&gt; IG.edges(u=1, v=2) # all edge between nodes 1 and 2
+[Interval(2, 6, (1, 2)), Interval(1, 4, (1, 2))]
+&gt;&gt;&gt; IG.edges(1, 2, 5, 6) # all edges between nodes 1 and 2 which have an overlapping interval with [5, 6)
+[Interval(2, 6, (1, 2))]
+</pre>
+</blockquote>
+<p>As it is shown, <tt class="docutils literal">IG.edges()</tt> is a powerful method to query the network for edges.
+You can also take advantage of <a href="#id13"><span class="problematic" id="id14">:meth:`IntervalGraph.has_node()`</span></a> and
+<a href="#id15"><span class="problematic" id="id16">:meth:`IntervalGraph.has_edge()`</span></a> as it is shown below,</p>
+<div class="system-message" id="id13">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 134); <em><a href="#id14">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<div class="system-message" id="id15">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 134); <em><a href="#id16">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.has_node(3)
+True
+&gt;&gt;&gt; 1 in IG # this is equivalent to IG.has_node(1)
+True
+&gt;&gt;&gt; IG.has_node(5)
+False
+&gt;&gt;&gt; IG.has_edge(2, 3)
+True
+&gt;&gt;&gt; IG.has_edge(1, H)
+False
+</pre>
+<p>Or constraint the begin and/or end of your search:</p>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.has_node(3, end=2) # end is non-inclusive
+False
+</pre>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.has_edge(2, 3, 3, 7) # matching an interval edge with nodes 2 and 3, and overlapping interval [3, 7)
+True
+&gt;&gt;&gt; IG.has_edge(2, 3, 3, 7, overlapping=False) # setting overlapping=False, searches for an exact interval match
+False
+</pre>
+</blockquote>
+<p>One can remove nodes and edges from the graph in a similar fashion to adding.
+by using <a href="#id17"><span class="problematic" id="id18">:meth:`IntervalGraph.remove_node`</span></a> and
+<a href="#id19"><span class="problematic" id="id20">:meth:`IntervalGraph.remove_edge`</span></a>, e.g.</p>
+<div class="system-message" id="id17">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 159); <em><a href="#id18">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<div class="system-message" id="id19">
+<p class="system-message-title">System Message: ERROR/3 (<tt class="docutils">/Users/makanarastuie/Documents/Projects/dynetworkx/dydoc/source/tutorial.rst</tt>, line 159); <em><a href="#id20">backlink</a></em></p>
+Unknown interpreted text role &quot;meth&quot;.</div>
+<blockquote>
+<pre class="doctest-block">
+&gt;&gt;&gt; IG.remove_node(H)
+[1, 2, 3]
+&gt;&gt;&gt; IG.remove_edge(1, 3, 6, 9, overlapping=False)
+&gt;&gt;&gt; IG.edges()
+[Interval(2, 5, (2, 3)), Interval(2, 6, (1, 2)), Interval(1, 4, (1, 2))]
+</pre>
+</blockquote>
+</div>
+<div class="section" id="what-to-use-as-nodes-and-edges">
+<h1>What to use as nodes and edges</h1>
+<p>Just like NetworkX, DyNetworkX does not have a specific type for nodes an edges.
+This allows you to represent nodes and edges with any hashable object to add
+more depth and meanning to your interval graph. The most common choices are
+numbers or strings, but a node can be any hashable object (except <tt class="docutils literal">None</tt>),
+and an edge can be associated with any object <tt class="docutils literal">x</tt> using
+<tt class="docutils literal">IG.add_edge(n1, n2, begin, end, object=x)</tt>.</p>
+<p>As an example, <tt class="docutils literal">n1</tt> and <tt class="docutils literal">n2</tt> could be real people's profile url or a
+custom python object and <tt class="docutils literal">x</tt> can be another python object which
+describes the detail of the contact between the two people. This
+way, you are not bound to only associating weights with the
+edges.</p>
+<p>Based on the NetworkX's experience, this is quite useful, but its abuse
+can lead to unexpected suprises unless on is familair with Python.</p>
+</div>
+</div>
+</body>
+</html>
