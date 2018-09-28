@@ -106,7 +106,6 @@ class SnapshotGraph(object):
         num_in_seq: integer, optional (default= None)
             Time slot to begin insertion at.
 
-
         Returns
         -------
         None
@@ -114,14 +113,21 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> nxG1 = nx.Graph()
-        >>>
         >>> nxG1.add_edges_from([(1, 2), (1, 3)])
-        >>>
         >>> G = dnx.SnapshotGraph()
-        >>> G.insert(nxG1)
+        >>> G.insert(nxG1, 0)
+
         """
         if not snap_len:
             snap_len = 1
+
+        if not num_in_seq:
+            num_in_seq = len(self.snapshots)
+
+        if num_in_seq > len(self.snapshots):
+            raise ValueError(
+                'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
+                                                                                                    len(self.snapshots)))
 
         for _ in range(snap_len):
             self.snapshots.insert(num_in_seq, graph)
@@ -266,7 +272,7 @@ class SnapshotGraph(object):
                 return_degrees.append(g.degree(nbunch, weight=weight))
         else:
             for g in graph_list:
-                return_degrees.append(g.degree(g.nodes(data=True), weight=weight))
+                return_degrees.append(g.degree(g, weight=weight))
 
         return return_degrees
 
@@ -410,7 +416,7 @@ class SnapshotGraph(object):
         >>> G.add_snapshot([(1, 2), (1, 3)])
         >>> G.add_snapshot([(1, 4), (1, 3)])
         >>> G.is_multigraph(sbunch=[0, 1])
-        [False]
+        [False, False]
         >>> G.is_multigraph()
         [False, False]
 
@@ -450,7 +456,7 @@ class SnapshotGraph(object):
         >>> G.add_snapshot([(1, 2), (1, 3)])
         >>> G.add_snapshot([(1, 4), (1, 3)])
         >>> G.is_directed(sbunch=[0, 1])
-        [False]
+        [False, False]
         >>> G.is_directed()
         [False, False]
 
@@ -744,4 +750,3 @@ class SnapshotGraph(object):
 
         for g in graph_list:
                 g.add_edges_from(ebunch, **attrs)
-
