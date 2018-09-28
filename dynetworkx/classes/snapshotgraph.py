@@ -42,7 +42,7 @@ class SnapshotGraph(object):
 
         Returns
         -------
-        Number graphs in snapshot graph
+        num_snapshots : int
             The number of snapshots in the graph.
 
         Examples
@@ -100,7 +100,7 @@ class SnapshotGraph(object):
         Parameters
         ----------
         graph: networkx graph object
-            networkx graph to be inserted into snapshot graph.
+            A networkx graph to be inserted into snapshot graph.
         snap_len: integer, optional (default= None)
             Length of the snapshot.
         num_in_seq: integer, optional (default= None)
@@ -137,11 +137,11 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        ebunch : List of desired edges to add, optional (default= None)
+        ebunch : container of edges, optional (default= None)
             Each edge in the ebunch list will be included to all added graphs.
-        graph: networkx graph object, optional (default= None)
+        graph : networkx graph object, optional (default= None)
             networkx graph to be inserted into snapshot graph.
-        num_in_seq: integer, optional (default= None)
+        num_in_seq : integer, optional (default= None)
             Time slot to begin insertion at.
 
         Returns
@@ -174,17 +174,18 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots
+        nbunch : container of nodes
+            Each node in the nbunch list will be included in all subgraphs indexed in sbunch.
+        sbunch : container of edges, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of subgraphs. It is highly recommended that this list is sequential,
             however it can be out of order.
-        nbunch : List of desired nodes to add
-            Each node in the nbunch list will be included in all subgraphs indexed in sbunch.
 
         Returns
         -------
-            SnapshotGraph
+            snap_graph : SnapshotGraph object
                 Contains only the nodes in bunch, and snapshot indexes in sbunch.
+
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
@@ -226,11 +227,11 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of node degrees. It is highly recommended that this list is sequential,
             however it can be out of order.
-        nbunch : List of desired nodes, optional (default= None)
+        nbunch : container of nodes, optional (default= None)
             Each node in the nbunch list will be included in the returned list of
             node degrees.
         weight : string, optional (default= None)
@@ -238,7 +239,8 @@ class SnapshotGraph(object):
 
         Returns
         -------
-            List of DegreeView objects containing the degree of each node, indexed by requested snapshot.
+            degree_list : list
+                List of DegreeView objects containing the degree of each node, indexed by requested snapshot.
 
         Examples
         --------
@@ -281,14 +283,15 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of number of nodes in the snapshot. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            A list of of the number of nodes in each requested snapshot.
+            num_nodes : list
+                A list of of the number of nodes in each requested snapshot.
 
         Examples
         --------
@@ -320,14 +323,15 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of node orders. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            A list of the orders of each snapshot
+            snapshot_orders : list
+                A list of the orders of each snapshot.
 
         Examples
         --------
@@ -359,9 +363,9 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        n: networkx node object
-            node to be checked for in requested snapshots
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        n : node
+            Node to be checked for in requested snapshots.
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of if the snapshot graph includes the node. It is highly recommended
             that this list is sequential, however it can be out of order.
@@ -401,14 +405,15 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of booleans. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            List of boolean values if index in sbunch is a multigraph.
+            mutli_list : list
+                List of boolean values if index in sbunch is a multigraph.
 
         Examples
         --------
@@ -441,14 +446,15 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of booleans. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            List of boolean values if index in sbunch is a directed graph.
+            is_direct_list : list
+                List of boolean values if index in sbunch is a directed graph.
 
         Examples
         --------
@@ -481,14 +487,15 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of directed graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            List of networkx directed graph objects.
+            direct_list : list
+                List of networkx directed graph objects.
 
         Examples
         --------
@@ -519,14 +526,15 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of undirected graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            List of networkx graph objects.
+            undirect_list : list
+                List of networkx graph objects.
 
         Examples
         --------
@@ -558,7 +566,7 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of sizes. It is highly recommended that this list is sequential,
             however it can be out of order.
@@ -568,7 +576,8 @@ class SnapshotGraph(object):
 
         Returns
         -------
-            List of sizes of each graph indexed in sbunch.
+            size_list: list
+                List of sizes of each graph indexed in sbunch.
 
         Examples
         --------
@@ -601,14 +610,16 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
 
         Returns
         -------
-            List of nx.graph objects.
+            graph_list : list
+                List of networkx graph objects.
+
 
         Examples
         --------
@@ -640,9 +651,9 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        nbunch : List of desired nodes to add
+        nbunch : container of nodes
             Each node in the nbunch list will be added to all graphs indexed in sbunch.
-        sbunch : List of indexes for desired snapshots, optional (default= None)
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of node degrees. It is highly recommended that this list is sequential,
             however it can be out of order.
@@ -696,9 +707,9 @@ class SnapshotGraph(object):
 
         Parameters
         ----------
-        ebunch : List of desired edges to add
+        ebunch : container of edges
             Each edge in the ebunch list will be added to all graphs indexed in sbunch.
-        sbunch : List of indexes for desired snapshots
+        sbunch : container of snapshot indexes, optional (default= None)
             Each snapshot index in this list will be included in the returned list
             of node degrees. It is highly recommended that this list is sequential,
             however it can be out of order.
