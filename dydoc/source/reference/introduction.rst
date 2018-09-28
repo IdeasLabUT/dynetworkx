@@ -30,8 +30,6 @@ The following basic graph types are provided as Python classes:
    a node and itself.
 
 :class:`SnapshotGraph`
-   This class implements an easy way to divide any type of Networkx graph
-   to separate snapshots. This class is still in its early stages of development.
-
-:class:`DynamicGraph`
-    This class implements a continuous dynamic graph with edges, name, and graph attributes.
+   This class implements an easy way to gain access to a list of NetworkX
+   networks and provides various methods to interact, manipulate and
+   analyze the networks.

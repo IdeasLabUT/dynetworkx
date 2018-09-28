@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'DyNetworkX'
-copyright = '2018, Makan Arastuie'
+copyright = '2018, IDEAS Lab @ The University of Toledo'
 author = 'Makan Arastuie'
 
 # The version info for the project you're documenting, acts as replacement for
