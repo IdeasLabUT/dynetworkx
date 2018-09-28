@@ -38,7 +38,7 @@ form is adding a single node,
 
     >>> IG.add_node(1)
 
-add alist of nodes,
+add a list of nodes,
 
     >>> IG.add_nodes_from([2, 3])
 
@@ -66,7 +66,7 @@ Edges
 
 Edges are what make an interval graph possible. Every edge is defined by 2 nodes, the
 inclusive beginning of the interval when the edge first appears and its
-non-inclusive end. beginning of an interval must be strictly smaller
+non-inclusive end. Beginning of an interval must be strictly smaller
 than its end and both can be of any orderable types.
 
 .. note:: In this tutotial as well as IntervalGraph documentation, the two terms ``edge``
@@ -74,7 +74,7 @@ than its end and both can be of any orderable types.
 
 ``IG`` can also be grown by adding one edge at a time,
 
-   >>> IG.add_edge(1, 2, 1, 4)
+   >>> IG.add_edge(1, 2, 1, 4) # n1, n2, beginning, end of the edge interval
    >>> ie = (2, 3, 2, 5)
    >>> IG.add_edge(*ie) # unpack interval edge tuple*
 
@@ -87,7 +87,7 @@ interval edge-tuples. An interval edge-tuple is a 4-tuple of nodes and intervals
 
 .. note:: In above example it is worth noting that the two added interval edges,
    ``(1, 2, 1, 4)`` and ``(1, 2, 2, 6)`` are two different interval edges,
-   since they exists on different interval.
+   since they exists on different intervals.
 
 If a new interval edge is to be added with nodes that are not currently in the
 interval graph, nodes will be added automatically.
@@ -105,7 +105,7 @@ At this stage the interval graph ``IG`` consist of 4 nodes and 4 edges,
    >>> len(IG.edges())
    4
 
-We can examine the nodes and edges. Two basic grpah properties facilitate reporting:
+We can examine nodes and edges with two interval graph methods which facilitate reporting:
 :meth:`IntervalGraph.nodes()` and :meth:`IntervalGraph.edges()`. These are lists
 of the nodes and interval edges. They offer a continually updated read-only view
 into the graph structure.
@@ -163,26 +163,26 @@ As it is shown, ``IG.edges()`` is a powerful method to query the network for edg
 You can also take advantage of :meth:`IntervalGraph.has_node()` and
 :meth:`IntervalGraph.has_edge()` as it is shown below,
 
-   >>> IG.has_node(3)
-   True
-   >>> 1 in IG # this is equivalent to IG.has_node(1)
-   True
-   >>> IG.has_node(5)
-   False
-   >>> IG.has_edge(2, 3)
-   True
-   >>> IG.has_edge(1, H)
-   False
+    >>> IG.has_node(3)
+    True
+    >>> 1 in IG # this is equivalent to IG.has_node(1)
+    True
+    >>> IG.has_node(5)
+    False
+    >>> IG.has_edge(2, 3)
+    True
+    >>> IG.has_edge(1, H)
+    False
 
-   Or constraint the begin and/or end of your search:
+Or constraint the begin and/or end of your search:
 
-   >>> IG.has_node(3, end=2) # end is non-inclusive
-   False
+    >>> IG.has_node(3, end=2) # end is non-inclusive
+    False
 
-   >>> IG.has_edge(2, 3, 3, 7) # matching an interval edge with nodes 2 and 3, and overlapping interval [3, 7)
-   True
-   >>> IG.has_edge(2, 3, 3, 7, overlapping=False) # setting overlapping=False, searches for an exact interval match
-   False
+    >>> IG.has_edge(2, 3, 3, 7) # matching an interval edge with nodes 2 and 3, and overlapping interval [3, 7)
+    True
+    >>> IG.has_edge(2, 3, 3, 7, overlapping=False) # setting overlapping=False, searches for an exact interval match
+    False
 
 One can remove nodes and edges from the graph in a similar fashion to adding.
 by using :meth:`IntervalGraph.remove_node` and
@@ -210,7 +210,7 @@ describes the detail of their contact. This way, you are not
 bound to only associating weights with the edges.
 
 Based on the NetworkX's experience, this is quite useful, but its abuse
-can lead to unexpected surprises unless on is familiar with Python.
+can lead to unexpected surprises unless one is familiar with Python.
 
 Adding attributes to graphs, nodes, and edges
 ---------------------------------------------
@@ -224,13 +224,13 @@ but attributes can be added or changed using ``add_edge``, ``add_node``.
 Graph attributes
 ~~~~~~~~~~~~~~~~
 
-Assign graph attributes when creating a new graph
+Assign graph attributes when creating a new graph,
 
     >>> IG = dnx.IntervalGraph(state='Ohio')
     >>> IG.graph
     {'state': 'Ohio'}
 
-Or you can  modify attributes later
+Or you can  modify attributes later,
 
    >>> IG.graph['state'] = 'Michigan'
    >>> IG.graph
@@ -266,4 +266,84 @@ Similarly, add/change edge attributes using ``add_edge()`` or ``add_edges_from()
    >>> G.add_edge(1, 2, 4, 6, weight=6.6) # Updates the weight attribute of the edge.
 
 Note that updating an edge's attribute is similar to updating nodes' attributes.
+
+Subgraphs and snapshots
+-----------------------
+
+You can create one, or a series of snapshots of, NetworkX `Graph` or `MultiGraph` from
+an interval graph if you wish to analyze a portion, or your entire interval graph,
+using well-known static network algorithms that are available in NetworkX.
+
+Subgraphs
+~~~~~~~~~
+
+To extract a portion of an interval graph, given an interval,
+you can utilize :meth:`IntervalGraph.to_subgraph`,
+
+   >>> IG = dnx.IntervalGraph()
+   >>> IG.add_edges_from([(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)])
+   >>> H = IG.to_subgraph(4, 12)
+   >>> type(H)
+   <class 'networkx.classes.graph.Graph'>
+   >>> list(H.edges(data=True))
+   [(1, 2, {}), (2, 4, {})]
+
+Note that you can also use :meth:`IntervalGraph.interval` to get the interval for the
+entire interval graph, and use that to convert an interval graph to a NetworkX Graph.
+
+You can also keep the information about each edge's interval as attributes on the
+NetworkX's Graph:
+
+   >>> H = G.to_subgraph(4, 12, edge_interval_data=True)
+   >>> type(H)
+   <class 'networkx.classes.graph.Graph'>
+   >>> list(H.edges(data=True))
+   [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 15, 'begin': 8})]
+
+Notice that if there are multiple edges available between two nodes, the interval information
+is going to reflect only one of the edges. Another option is to retrieve a `MultiGraph` to
+lose less information in the conversion process:
+
+   >>> M = G.to_subgraph(4, 12, multigraph=True, edge_interval_data=True)
+   >>> type(M)
+   <class 'networkx.classes.multigraph.MultiGraph'>
+   >>> list(M.edges(data=True))
+   [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 11, 'begin': 1}), (2, 4, {'end': 15, 'begin': 8})]
+
+
+Snapshots
+~~~~~~~~~
+
+A more traditional method of analyzing continuous dynamic networks has been dividing the
+network into a series of fixed-interval snapshots. Although some information will be
+lost in the conversion due to the classic limitations of representing a continuous
+network in a discrete format, you will gain access to numerous well-defined
+algorithms which do not exist for continuous networks.
+
+To do so, you can simply use :meth:`IntervalGraph.to_snapshots` and set the number of
+snapshots you wish to divided the network into:
+
+    >>> S, l = G.to_snapshots(2, edge_interval_data=True, return_length=True)
+    >>> S # a list of NetworkX Graphs
+    [<networkx.classes.graph.Graph object at 0x100000>, <networkx.classes.graph.Graph object at 0x150d00>]
+    >>> l # length of the interval of a single snapshot
+    9.0
+    >>> for g in S:
+    >>> ... g.edges(data=True))
+    [(1, 2, {'begin': 3, 'end': 10}), (2, 4, {'begin': 8, 'end': 15})]
+    [(2, 4, {'begin': 8, 'end': 15}), (4, 6, {'begin': 12, 'end': 19})]
+
+
+Combining this method with :class:`SnapshotGraph` can be a powerful tool to gain access
+to all the methods available through DyNetworkX's :class:`SnapshotGraph`.
+
+Similar to `to_subgraph` method, you can also divide the interval graph into a series of
+NetworkX's `MultiGraph`, if that is what you need.
+
+Importing from text file
+------------------------
+
+Using `load_from_txt` you can also read in an interval graph from a text file in an
+specific edge-list format. For more detail checkout the documentation on
+:meth:`IntervalGraph.load_from_txt`.
 
