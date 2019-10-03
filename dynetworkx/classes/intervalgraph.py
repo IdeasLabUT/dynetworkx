@@ -104,12 +104,12 @@ class IntervalGraph(object):
     in an IntervalTree. Both are based on
     intervaltree available in pypi (https://pypi.org/project/intervaltree).
     IntervalTree allows for fast interval based search through edges,
-    which makes interval graph analyes possible.
+    which makes interval graph analysis possible.
 
     The Graph class uses a dict-of-dict-of-dict data structure.
-    The outer dict (node_dict) holds adjacency information keyed by node.
+    The outer dict (node_dict) holds adjacency information keyed by nodes.
     The next dict (adjlist_dict) represents the adjacency information and holds
-    edge data keyed by interval object.  The inner dict (edge_attr_dict) represents
+    edge data keyed by interval objects. The inner dict (edge_attr_dict) represents
     the edge data and holds edge attribute values keyed by attribute names.
     """
 
@@ -130,8 +130,8 @@ class IntervalGraph(object):
         """
         self.tree = IntervalTree()
         self.graph = {}  # dictionary for graph attributes
-        self._adj = {}
         self._node = {}
+        self._adj = {}
 
         self.graph.update(attr)
 
@@ -214,7 +214,7 @@ class IntervalGraph(object):
         return self.tree.begin(), self.tree.end()
 
     def add_node(self, node_for_adding, **attr):
-        """Add a single node `node_for_adding`  and update node attributes.
+        """Add a single node `node_for_adding` and update node attributes.
 
         Parameters
         ----------
@@ -316,11 +316,11 @@ class IntervalGraph(object):
 
         Parameters
         ----------
-        begin: integer, optional  (default= beginning of the entire interval graph)
+        begin: int or float, optional (default= beginning of the entire interval graph)
             Inclusive beginning time of the node appearing in the interval graph.
-        end: integer, optional  (default= end of the entire interval graph + 1)
+        end: int or float, optional  (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the node appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
 
         Returns
@@ -351,16 +351,9 @@ class IntervalGraph(object):
         if begin is None and end is None:
             return len(self._node)
 
-        if begin is None:
-            begin = self.tree.begin()
-
-        if end is None:
-            end = self.tree.end() + 1
-
-        iedges = self.tree[begin:end]
+        iedges = self.__search_tree(begin, end)
 
         inodes = set()
-
         for iv in iedges:
             inodes.add(iv.data[0])
             inodes.add(iv.data[1])
@@ -375,11 +368,11 @@ class IntervalGraph(object):
         Parameters
         ----------
         n : node
-        begin: integer, optional  (default= beginning of the entire interval graph)
+        begin: int or float, optional  (default= beginning of the entire interval graph)
             Inclusive beginning time of the node appearing in the interval graph.
-        end: integer, optional  (default= end of the entire interval graph + 1)
+        end: int or float, optional  (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the node appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
 
         Examples
@@ -405,18 +398,14 @@ class IntervalGraph(object):
         False
         """
         try:
-            exists_node = n in self._node
+            node_exists = n in self._node
         except TypeError:
-            exists_node = False
+            node_exists = False
 
-        if (begin is None and end is None) or not exists_node:
-            return exists_node
+        if (begin is None and end is None) or not node_exists:
+            return node_exists
 
-        if begin is None:
-            begin = self.tree.begin()
-
-        if end is None:
-            end = self.tree.end() + 1
+        begin, end = self.__validate_interval(begin, end)
 
         iedges = self._adj[n].keys()
 
@@ -434,11 +423,11 @@ class IntervalGraph(object):
 
         Parameters
         ----------
-        begin: integer, optional  (default= beginning of the entire interval graph)
+        begin: int or float, optional  (default= beginning of the entire interval graph)
             Inclusive beginning time of the node appearing in the interval graph.
-        end: integer, optional  (default= end of the entire interval graph + 1)
+        end: int or float, optional  (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the node appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal to begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
         data : string or bool, optional (default=False)
             The node attribute returned in 2-tuple (n, dict[data]).
@@ -485,13 +474,7 @@ class IntervalGraph(object):
         if begin is None and end is None:
             return NodeDataView(self._node, data=data, default=default)
 
-        if begin is None:
-            begin = self.tree.begin()
-
-        if end is None:
-            end = self.tree.end() + 1
-
-        iedges = self.tree[begin:end]
+        iedges = self.__search_tree(begin, end)
 
         inodes = set()
         for iv in iedges:
@@ -515,11 +498,11 @@ class IntervalGraph(object):
         ----------
         n : node
            A node in the graph
-        begin: integer, optional  (default= beginning of the entire interval graph)
+        begin: int or float, optional  (default= beginning of the entire interval graph)
             Inclusive beginning time of the node appearing in the interval graph.
-        end: integer, optional  (default= end of the entire interval graph + 1)
+        end: int or float, optional  (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the node appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal to begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
 
         Examples
@@ -545,13 +528,8 @@ class IntervalGraph(object):
             for iedge in list(self._adj[n].keys()):
                 self.__remove_iedge(iedge)
         else:
-            if begin is None:
-                begin = self.tree.begin()
-
-            if end is None:
-                end = self.tree.end() + 1
-
-            for iedge in self.tree[begin:end]:
+            iedges = self.__search_tree(begin, end)
+            for iedge in iedges:
                 if iedge.data[0] == n or iedge.data[1] == n:
                     self.__remove_iedge(iedge)
 
@@ -687,11 +665,11 @@ class IntervalGraph(object):
         u, v : nodes
             Nodes can be, for example, strings or numbers.
             Nodes must be hashable (and not None) Python objects.
-        begin : integer, optional (default= beginning of the entire interval graph)
+        begin : int or float, optional (default= beginning of the entire interval graph)
             Inclusive beginning time of the node appearing in the interval graph.
-        end : integer, optional (default= end of the entire interval graph + 1)
+        end : int or float, optional (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the node appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
         overlapping : bool, optional (default= True)
             if True, it returns True if there exists an edge between u and v with
@@ -740,11 +718,7 @@ class IntervalGraph(object):
 
             return self.__get_iedge_in_tree(u, v, begin, end) is not None
 
-        if begin is None:
-            begin = self.tree.begin()
-
-        if end is None:
-            end = self.tree.end() + 1
+        begin, end = self.__validate_interval(begin, end)
 
         for iv in self._adj[u].keys():
             if (iv.data[0] == v or iv.data[1] == v) and iv.overlaps(begin=begin, end=end):
@@ -752,7 +726,7 @@ class IntervalGraph(object):
         return False
 
     def edges(self, u=None, v=None, begin=None, end=None, data=False, default=None):
-        """A list of Interval objects of the IntervalGraph edges.
+        """Returns a list of Interval objects of the IntervalGraph edges.
 
         All edges which are present within the given interval.
 
@@ -768,11 +742,11 @@ class IntervalGraph(object):
             Nodes can be, for example, strings or numbers.
             Nodes must be hashable (and not None) Python objects.
             If the node does not exist in the graph, a key error is raised.
-        begin: integer, optional  (default= beginning of the entire interval graph)
+        begin: int or float, optional  (default= beginning of the entire interval graph)
             Inclusive beginning time of the edge appearing in the interval graph.
-        end: integer, optional  (default= end of the entire interval graph + 1)
+        end: int or float, optional  (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the edge appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal to begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
         data : string or bool, optional (default=False)
             If True, return 2-tuple (Interval object, dict of attributes).
@@ -835,7 +809,6 @@ class IntervalGraph(object):
         >>> G.edges(u=1, begin=5, end=9, data="weight")
         [(Interval(3, 10, (1, 2)), 10)]
         """
-
         # If non of the nodes are defined the interval tree is queried for the list of edges,
         # otherwise the edges are returned based on the nodes in the self._adj.o
         if u is None and v is None:
@@ -843,29 +816,20 @@ class IntervalGraph(object):
                 iedges = self.tree.all_intervals
             # interval filtering
             else:
-                if begin is None:
-                    begin = self.tree.begin()
-                if end is None:
-                    end = self.tree.end() + 1
-
-                iedges = self.tree[begin:end]
+                iedges = self.__search_tree(begin, end)
 
         else:
             # Node filtering
             if u is not None and v is not None:
-               iedges = [iv for iv in self._adj[u].keys() if iv.data[0] == v or iv.data[1] == v]
+                iedges = [iv for iv in self._adj[u].keys() if iv.data[0] == v or iv.data[1] == v]
             elif u is not None:
                 iedges = self._adj[u].keys()
             else:
                 iedges = self._adj[v].keys()
 
             # Interval filtering
-            if begin is not None and end is not None:
-                iedges = [iv for iv in iedges if iv.end >= begin and iv.begin < end]
-            elif begin is not None:
-                iedges = [iv for iv in iedges if iv.end >= begin]
-            elif end is not None:
-                iedges = [iv for iv in iedges if iv.begin < end]
+            begin, end = self.__validate_interval(begin, end)
+            iedges = [iv for iv in iedges if IntervalGraph.__overlaps_or_contains(iv, begin, end)]
 
         # Appending attribute data if needed
         if data is False:
@@ -888,11 +852,11 @@ class IntervalGraph(object):
         u, v : nodes
             Nodes can be, for example, strings or numbers.
             Nodes must be hashable (and not None) Python objects.
-        begin : integer, optional (default= beginning of the entire interval graph)
+        begin : int or float, optional (default= beginning of the entire interval graph)
             Inclusive beginning time of the edge appearing in the interval graph.
-        end : integer, optional (default= end of the entire interval graph + 1)
+        end : int or float, optional (default= end of the entire interval graph + 1)
             Non-inclusive ending time of the edge appearing in the interval graph.
-            Must be bigger than begin.
+            Must be bigger than or equal to begin.
             Note that the default value is shifted up by 1 to make it an inclusive end.
         overlapping : bool, optional (default= True)
             if True, remove the edge between u and v with overlapping interval
@@ -936,9 +900,8 @@ class IntervalGraph(object):
                 raise NetworkXError("For exact interval match (overlapping=False), both begin and end must be defined.")
 
             iedge = self.__get_iedge_in_tree(u, v, begin, end)
-            if iedge is None:
-                return
-            self.__remove_iedge(iedge)
+            if iedge is not None:
+                self.__remove_iedge(iedge)
             return
 
         iedges_to_remove = []
@@ -950,14 +913,10 @@ class IntervalGraph(object):
                     iedges_to_remove.append(iv)
 
         # remove edge between u and v with overlapping interval with the given interval
-        if begin is None:
-            begin = self.tree.begin()
-
-        if end is None:
-            end = self.tree.end() + 1
+        begin, end = self.__validate_interval(begin, end)
 
         for iv in self._adj[u].keys():
-            if (iv.data[0] == v or iv.data[1] == v) and iv.overlaps(begin=begin, end=end):
+            if (iv.data[0] == v or iv.data[1] == v) and IntervalGraph.__overlaps_or_contains(iv, begin, end):
                 iedges_to_remove.append(iv)
 
         # removing found iedges
@@ -994,9 +953,9 @@ class IntervalGraph(object):
         u, v : nodes
             Nodes can be, for example, strings or numbers.
             Nodes must be hashable (and not None) Python objects.
-        begin : integer
+        begin : int or float
             Inclusive beginning time of the edge appearing in the interval graph.
-        end : integer
+        end : int or float
             Non-inclusive ending time of the edge appearing in the interval graph.
             Must be bigger than begin.
 
@@ -1020,17 +979,76 @@ class IntervalGraph(object):
 
         return None
 
+    def __validate_interval(self, begin=None, end=None):
+        """Returns validated begin and end.
+        Replaces begin with the begin time of the graph if None is passed.
+        Replaces end with the end time of the graph + 1 (to make it inclusive) if None is passed.
+        Raises an exception if begin is larger than end.
+
+        Parameters
+        ----------
+        begin : int or float, optional
+            Inclusive beginning time of the edge appearing in the interval graph.
+        end : int or float, optional
+            Non-inclusive ending time of the edge appearing in the interval graph.
+        """
+        if begin is None:
+            begin = self.tree.begin()
+
+        if end is None:
+            end = self.tree.end() + 1
+
+        if begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
+
+        return begin, end
+
+    def __search_tree(self, begin=None, end=None):
+        """if begin and end are equal performs a point search on the tree,
+        otherwise an interval search is performed.
+
+       Parameters
+       ----------
+       begin: int or float, optional  (default= beginning of the entire interval graph)
+            Inclusive beginning time of the node appearing in the interval graph.
+        end: int or float, optional  (default= end of the entire interval graph + 1)
+            Non-inclusive ending time of the node appearing in the interval graph.
+            Must be bigger than or equal begin.
+            Note that the default value is shifted up by 1 to make it an inclusive end.
+       """
+        begin, end = self.__validate_interval(begin, end)
+        if begin != end:
+            return self.tree[begin:end]
+        return self.tree[begin]
+
+    @staticmethod
+    def __overlaps_or_contains(iv, begin, end):
+        """Returns True if interval `iv` overlaps with begin and end.
+
+       Parameters
+       ----------
+       iv: Interval
+       begin: int or float
+            Inclusive beginning time of the node appearing in the interval graph.
+        end: int or float
+            Non-inclusive ending time of the node appearing in the interval graph.
+            Must be bigger than or equal begin.
+       """
+        # need to check for iv.contains(begin) in case begin == end
+        return iv.overlaps(begin, end) or iv.contains_point(begin)
+
     def to_subgraph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have overlapping intervals with the given interval.
 
         Parameters
         ----------
-        begin: integer
+        begin: int or float
             Inclusive beginning time of the edge appearing in the interval graph.
-            Must be bigger than begin.
-        end: integer
+        end: int or float
             Non-inclusive ending time of the edge appearing in the interval graph.
+            Must be bigger than or equal to begin.
         multigraph: bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
         edge_data: bool, optional (default= False)
@@ -1075,12 +1093,7 @@ class IntervalGraph(object):
         >>> list(M.edges(data=True))
         [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 11, 'begin': 1}), (2, 4, {'end': 15, 'begin': 8})]
         """
-
-        if end <= begin:
-            raise NetworkXError("IntervalGraph: subgraph duration must be strictly bigger than zero: "
-                                "begin: {}, end: {}.".format(begin, end))
-
-        iedges = self.tree[begin:end]
+        iedges = self.__search_tree(begin, end)
 
         if multigraph:
             G = MultiGraph()
@@ -1194,10 +1207,11 @@ class IntervalGraph(object):
         return snapshots
 
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=None, comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=None, intervaltype=float, comments="#"):
         """Read interval graph in from path.
            Every line in the file must be an edge in the following format: "node node begin end".
-           Both interval times must be integers. Nodes can be any hashable objects.
+           Both interval times must be integers or floats.
+           Nodes can be any hashable objects.
 
         Parameters
         ----------
@@ -1206,6 +1220,10 @@ class IntervalGraph(object):
 
         nodetype : Python type, optional
            Convert nodes to this type.
+
+        intervaltype : Python type, optional (default= float)
+        Convert interval begin and end to this type.
+        This must be an orderable type, ideally int or float. Other orderable types have not been fully tested.
 
         comments : string, optional
            Marker for comment lines
@@ -1252,13 +1270,13 @@ class IntervalGraph(object):
                         u = nodetype(u)
                         v = nodetype(v)
                     except:
-                        raise TypeError("Failed to convert node to type {0}".format(nodetype))
+                        raise TypeError("Failed to convert node to {0}".format(nodetype))
 
                 try:
-                    begin = int(begin)
-                    end = nodetype(end)
+                    begin = intervaltype(begin)
+                    end = intervaltype(end)
                 except:
-                    raise TypeError("Failed to convert time to type int")
+                    raise TypeError("Failed to convert interval time to {}".format(intervaltype))
 
                 ig.add_edge(u, v, begin, end)
 
