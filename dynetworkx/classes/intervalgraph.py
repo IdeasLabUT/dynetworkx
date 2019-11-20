@@ -591,7 +591,7 @@ class IntervalGraph(object):
         >>> G.add_edge(1, 3, 4, 9, weight=7, capacity=15, length=342.7)
         """
 
-        iedge = self.__get_iedge_in_tree(begin, end, u, v)
+        iedge = self.__get_iedge_in_tree(u, v, begin, end)
 
         # if edge exists, just update attr
         if iedge is not None:
