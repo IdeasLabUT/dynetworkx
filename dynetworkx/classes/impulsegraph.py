@@ -5,17 +5,22 @@ from sortedcontainers import SortedDict
 from networkx.classes.multigraph import MultiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 
-
 class ImpulseGraph(object):
-    """Base class for undirected interval graphs.
+    """Base class for undirected impulse graphs.
 
     The ImpulseGraph class allows any hashable object as a node
     and can associate key/value attribute pairs with each undirected edge.
+
+    ImpulseGraph is designed for networks where pairs of nodes may have multiple interactions,
+    each represented by an edge with a timestamp, e.g. email messages between co-workers.
+    ImpulseGraph is not designed for networks where pairs of nodes may only have a single edge,
+    e.g. friendship networks.
 
     Each edge must have one integer, timestamp.
 
     Self-loops are allowed.
     Multiple edges between two nodes are allowed.
+    (two or more edges with the same nodes and timestamp) are not.
 
     Parameters
     ----------
@@ -24,7 +29,7 @@ class ImpulseGraph(object):
 
     Examples
     --------
-    Create an empty graph structure (a "null interval graph") with no nodes and
+    Create an empty graph structure (a "null impulse graph") with no nodes and
     no edges.
 
     >>> G = dnx.ImpulseGraph()
@@ -72,7 +77,7 @@ class ImpulseGraph(object):
 
     Keep in mind that the edge timestamp is not an attribute of the edge.
 
-    >>> G = dnx.IntervalGraph(day="Friday")
+    >>> G = dnx.ImpulseGraph(day="Friday")
     >>> G.graph
     {'day': 'Friday'}
 
@@ -102,12 +107,12 @@ class ImpulseGraph(object):
     The Graph class uses a dict-of-dict-of-dict data structure.
     The outer dict (node_dict) holds adjacency information keyed by nodes.
     The next dict (adjlist_dict) represents the adjacency information and holds
-    edge data keyed by interval objects. The inner dict (edge_attr_dict) represents
+    edge data keyed by timestamp. The inner dict (edge_attr_dict) represents
     the edge data and holds edge attribute values keyed by attribute names.
     """
 
     def __init__(self, name='',**attr):
-        """Initialize an interval graph with edges, name, or graph attributes.
+        """Initialize an impulse graph with edges, name, or graph attributes.
 
         Parameters
         ----------
@@ -127,21 +132,20 @@ class ImpulseGraph(object):
         self._node = {}
         self._adj = {}
         self.name = name
-        self.edgeid = 0
-        
+        self.graph.update(name=name)
         self.graph.update(attr)
 
     def __str__(self):
-        """Return the interval graph name.
+        """Return the impulse graph name.
 
         Returns
         -------
         name : string
-            The name of the interval graph.
+            The name of the impulse graph.
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph(name='foo')
+        >>> G = dnx.ImpulseGraph(name='foo')
         >>> str(G)
         'foo'
         """
@@ -158,7 +162,7 @@ class ImpulseGraph(object):
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_nodes_from([2, 4, 5])
         >>> len(G)
         3
@@ -172,7 +176,7 @@ class ImpulseGraph(object):
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_node(2)
         >>> 2 in G
         True
@@ -278,7 +282,7 @@ class ImpulseGraph(object):
                 self._node[n[0]].update(n[1])
             else: self.add_node(n,**attr)
 
-    def number_of_nodes(self, begin=None, end=None, inclusive=(True,True)):
+    def number_of_nodes(self, begin=None, end=None, inclusive=(True,False)):
         """Return the number of nodes in the impulse graph between the given interval.
 
         Parameters
@@ -286,8 +290,9 @@ class ImpulseGraph(object):
         begin: int or float, optional (default= beginning of the entire impulse graph)
         end: int or float, optional  (default= end of the entire impulse graph)
             Must be bigger than or equal begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
-
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
+            
         Returns
         -------
         nnodes : int
@@ -309,7 +314,7 @@ class ImpulseGraph(object):
         2
         >>> G.number_of_nodes(begin=5, end=8)
         2
-        >>> G.number_of_nodes(end=11)
+        >>> G.number_of_nodes(end=12)
         4
         """
 
@@ -323,7 +328,7 @@ class ImpulseGraph(object):
             
         return len(inodes)
 
-    def has_node(self, n, begin=None, end=None, inclusive=(True,True)):
+    def has_node(self, n, begin=None, end=None, inclusive=(True,False)):
         """Return True if the impulse graph contains the node n, during the given interval.
 
         Identical to `n in G` when 'begin' and 'end' are not defined.
@@ -334,8 +339,9 @@ class ImpulseGraph(object):
         begin: int or float, optional  (default= beginning of the entire impulse graph)
         end: int or float, optional  (default= end of the entire impulse graph)
             Must be bigger than or equal begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
-
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
+            
         Examples
         --------
         >>> G = dnx.ImpulseGraph()
@@ -376,7 +382,7 @@ class ImpulseGraph(object):
             return True
         return False
         
-    def nodes(self, begin=None, end=None, inclusive=(True,True),data=False, default=None):
+    def nodes(self, begin=None, end=None, inclusive=(True,False),data=False, default=None):
         """A NodeDataView of the ImpulseGraph nodes.
 
         A nodes is considered to be present during an interval, if it has
@@ -387,7 +393,8 @@ class ImpulseGraph(object):
         begin: int or float, optional  (default= beginning of the entire impulse graph)
         end: int or float, optional  (default= end of the entire impulse graph)
             Must be bigger than or equal to begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
         data : string or bool, optional (default=False)
             The node attribute returned in 2-tuple (n, dict[data]).
             If False, return just the nodes n.
@@ -445,7 +452,7 @@ class ImpulseGraph(object):
 
         return NodeDataView(node_dict, data=data, default=default)
 
-    def remove_node(self, n, begin=None, end=None, inclusive=(True,True)):
+    def remove_node(self, n, begin=None, end=None, inclusive=(True,False)):
         """Remove the presence of a node n within the given interval.
 
         Removes the presence node n and all adjacent edges within the given interval.
@@ -461,13 +468,15 @@ class ImpulseGraph(object):
         begin: int or float, optional  (default= beginning of the entire impulse graph)
         end: int or float, optional  (default= end of the entire impulse graph)
             Must be bigger than or equal to begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
 
         Examples
         --------
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
         >>> G.add_nodes_from([(1, {'time': '1pm'}), (2, {'time': '2pm'}), (4, {'time': '4pm'})])
-        >>> G.nodes(begin=10, end=19)
+        >>> G.nodes(begin=10, end=20)
         [1, 2, 4, 6]
         >>> G.remove_node(6, begin=10, end=20)
         >>> G.nodes()
@@ -545,19 +554,16 @@ class ImpulseGraph(object):
 
         Associate data to edges using keywords:
 
-        >>> G.add_edge(1, 2, 10 weight=3)
+        >>> G.add_edge(1, 2, 10, weight=3)
         >>> G.add_edge(1, 3, 9, weight=7, capacity=15, length=342.7)
         """
         
-        eid = self.edgeid
-        self.tree.setdefault(t,set()).add((u,v,eid))
+        self.tree.setdefault(t,set()).add((u,v))
 
         self._node.setdefault(u,{})
         self._node.setdefault(v,{})
-        self._adj.setdefault(u,{})[(u,v,eid,t)] = attr
-        self._adj.setdefault(v,{})[(u,v,eid,t)] = attr
-
-        self.edgeid += 1
+        self._adj.setdefault(u,{})[(u,v,t)] = attr
+        self._adj.setdefault(v,{})[(u,v,t)] = attr
 
     def add_edges_from(self, ebunch_to_add, **attr):
         """Add all the edges in ebunch_to_add.
@@ -566,7 +572,7 @@ class ImpulseGraph(object):
         ----------
         ebunch_to_add : container of edges
             Each edge given in the container will be added to the
-            interval graph. The edges must be given as as 3-tuples (u, v, t).
+            impulse graph. The edges must be given as as 3-tuples (u, v, t).
             Timestamp must be orderable and the same type across all edges.
         attr : keyword arguments, optional
             Edge data (or labels or objects) can be assigned using
@@ -597,7 +603,7 @@ class ImpulseGraph(object):
                 raise NetworkXError("Edge tuple {0} must be a 3-tuple.".format(e))
             self.add_edge(e[0], e[1], e[2], **attr)
 
-    def has_edge(self, u, v, begin=None, end=None, inclusive=(True,True)):
+    def has_edge(self, u, v, begin=None, end=None, inclusive=(True,False)):
         """Return True if there exists an edge between u and v
         in the impulse graph, during the given interval.
 
@@ -609,8 +615,9 @@ class ImpulseGraph(object):
         begin : int or float, optional (default= beginning of the entire impulse graph)
         end : int or float, optional (default= end of the entire impulse graph)
             Must be bigger than or equal begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
-
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
+            
         Examples
         --------
         >>> G = dnx.ImpulseGraph()
@@ -630,14 +637,15 @@ class ImpulseGraph(object):
             return False
 
         begin, end = self.__validate_interval(begin, end)
-
-        for edge in self._adj[u].keys():
-            if edge[1] == v and inInterval(edge[3],begin, end, inclusive=inclusive):
-                return True
+        
+        if u in self._adj:
+            for edge in self._adj[u].keys():
+                if edge[1] == v and ImpulseGraph.__in_interval(edge[2],begin, end, inclusive=inclusive):
+                    return True
         return False
 
-    def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True,True), data=False, default=None):
-        """Returns a list of Interval objects of the IntervalGraph edges.
+    def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True,False), data=False, default=None):
+        """Returns a list of Edge Tuples of the ImpulseGraph edges.
 
         All edges which are present within the given interval.
 
@@ -656,7 +664,8 @@ class ImpulseGraph(object):
         begin: int or float, optional  (default= beginning of the entire impulse graph)
         end: int or float, optional  (default= end of the entire impulse graph)
             Must be bigger than or equal to begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
         data : string or bool, optional (default=False)
             If True, return 2-tuple (Edge Tuple, dict of attributes).
             If False, return just the Edge Tuples.
@@ -678,7 +687,7 @@ class ImpulseGraph(object):
         --------
         To get a list of all edges:
 
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
         >>> G.edges()
         [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
@@ -687,18 +696,18 @@ class ImpulseGraph(object):
 
         >>> G.edges(begin=10)
         [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
-        >>> G.edges(end=11)
+        >>> G.edges(end=12)
         [(1, 2, 10), (2, 4, 11)]
-        >>> G.edges(begin=11, end=15)
+        >>> G.edges(begin=11, end=16)
         [(2, 4, 11), (2, 4, 15)]
 
         To get edges with either of the two nodes being defined:
 
         >>> G.edges(u=2)
-        [(2, 4, 11), (2, 4, 15)]
+        [(1, 2, 10), (2, 4, 15), (2, 4, 11)]
         >>> G.edges(u=2, begin=11)
         [(2, 4, 11), (2, 4, 15)]
-        >>> G.edges(u=2, v=4, end=11)
+        >>> G.edges(u=2, v=4, end=12)
         [(2, 4, 11)]
         >>> G.edges(u=1, v=6)
         []
@@ -710,36 +719,51 @@ class ImpulseGraph(object):
         >>> G.add_edge(1, 2, 10, weight=10)
         >>> G.add_edge(2, 6, 10)
         >>> G.edges(data="weight")
-        [((1, 3, 4), 8), ((1, 2, 10), 10), ((2, 6, 10), None)]
+        [((1, 2, 10), 10), ((2, 6, 10), None), ((1, 3, 4), 8)]
         >>> G.edges(data="weight", default=5)
-        [((1, 3, 4), 8), ((1, 2, 10), 10), ((2, 6, 10), 5)]
+        [((1, 2, 10), 10), ((2, 6, 10), 5), ((1, 3, 4), 8)]
         >>> G.edges(data=True)
-        [((1, 3, 4), {'weight': 8, 'height': 18}), ((1, 2, 10), {'weight': 10}), ((2, 6, 10), {})]
+        [((1, 2, 10), {'weight': 10}), ((2, 6, 10), {}), ((1, 3, 4), {'weight': 8, 'height': 18})]
         >>> G.edges(u=1, begin=2, end=9, data="weight")
         [((1, 3, 4), 8)]
         """
-        
-        iedges = []
-        for edge in self.__search_tree(begin, end, inclusive=inclusive):
-            if u is not None and v is not None:
-                if u == edge[0] and v == edge[1]:
-                    iedges.append(edge)
-            elif u is not None:
-                if u == edge[0]:
-                    iedges.append(edge)
+
+        #If both nodes are not specified: 
+        if u is None and v is None:
+            iedges = set()
+            #If begin and end are not specified:
+            if begin is None and end is None:
+                for key in self._adj:
+                    iedges.update(self._adj[key].keys())
+            #If begin or end are specified:
             else:
-                iedges.append(edge)
+                iedges.update(self.__search_tree(begin,end,inclusive=inclusive))
+        #If at least one node is specified:
+        else:
+            #If both are specified:
+            if u is not None and v is not None:
+                iedges = {edge for edge in self._adj[u].keys() if edge[0] == v or edge[1] == v}
+            #If u is specified:
+            elif u is not None:
+                iedges = self._adj[u].keys()
+            #If v is specified:
+            else:
+                iedges = self._adj[v].keys()
+
+            begin, end = self.__validate_interval(begin, end)
+            iedges = {edge for edge in iedges if ImpulseGraph.__in_interval(edge[2], begin, end, inclusive=inclusive)}
 
         if data is False:
-            return [(edge[0],edge[1],edge[3]) for edge in iedges]
+            return [(edge[0],edge[1],edge[2]) for edge in iedges]
 
         if data is True:
-            return [((edge[0],edge[1],edge[3]), self._adj[edge[0]][edge]) for edge in iedges]
+            return [((edge[0],edge[1],edge[2]), self._adj[edge[0]][edge]) for edge in iedges]
 
-        return [((edge[0],edge[1],edge[3]), self._adj[edge[0]][edge][data]) if data in self._adj[edge[0]][edge]
-                else ((edge[0],edge[1],edge[3]),default) for edge in iedges]
+        #If data is an attribute:
+        return [((edge[0],edge[1],edge[2]), self._adj[edge[0]][edge][data]) if data in self._adj[edge[0]][edge]
+                else ((edge[0],edge[1],edge[2]),default) for edge in iedges]
     
-    def remove_edge(self, u, v, begin=None, end=None, inclusive=(True,True)):
+    def remove_edge(self, u, v, begin=None, end=None, inclusive=(True,False)):
         """Remove the edge between u and v in the impulse graph,
         during the given interval.
 
@@ -750,10 +774,11 @@ class ImpulseGraph(object):
         u, v : nodes
             Nodes can be, for example, strings or numbers.
             Nodes must be hashable (and not None) Python objects.
-        begin : int or float, optional (default= beginning of the entire interval graph)
-        end : int or float, optional (default= end of the entire interval graph + 1)
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+        end : int or float, optional (default= end of the entire impulse graph)
             Must be bigger than or equal to begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
 
         Examples
         --------
@@ -781,23 +806,22 @@ class ImpulseGraph(object):
             self.__remove_iedge(edge)
 
     def __remove_iedge(self, iedge):
-        """Remove the interval edge from the impulse graph.
+        """Remove the edge from the impulse graph.
 
         Quiet if the specified edge is not present.
 
         Parameters
         ----------
-        iedge : Edge Tuple (u,v,eid,t)
+        iedge : Edge Tuple (u,v,t)
             Edge to be removed.
         """
         
         u = iedge[0]
         v = iedge[1]
-        eid = iedge[2]
-        t = iedge[3]
+        t = iedge[2]
 
         try:
-            self.tree[t].remove((u,v,eid))
+            self.tree[t].remove((u,v))
             del self._adj[u][iedge]
             del self._adj[v][iedge]
         except:
@@ -819,7 +843,24 @@ class ImpulseGraph(object):
 
         return begin, end
 
-    def __search_tree(self, begin=None, end=None, inclusive=(True,True)):
+    def __in_interval(t,begin,end,inclusive=(True,False)):
+        if begin is None:
+            begin = float('-inf')
+        if end is None:
+            end = float('inf')
+
+        if inclusive == (True,True):
+            return t >= begin and t <= end
+        if inclusive == (True,False):
+            return t >= begin and t < end
+        if inclusive == (False,True):
+            return t > begin and t <= end
+        if inclusive == (False,False):
+            return t > begin and t < end
+
+
+
+    def __search_tree(self, begin=None, end=None, inclusive=(True,False)):
         """if begin and end are equal performs a point search on the tree,
         otherwise an interval search is performed.
 
@@ -828,8 +869,10 @@ class ImpulseGraph(object):
        begin: int or float, optional  (default= beginning of the entire impulse graph)
        end: int or float, optional  (default= end of the entire impulse graph)
             Must be bigger than or equal begin.
-       inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
        """
+        
         begin, end = self.__validate_interval(begin, end)
         
         if begin is not None and begin == end and begin in self.tree:
@@ -840,7 +883,7 @@ class ImpulseGraph(object):
             for edge in self.tree[t]:
                 yield (*edge,t)
 
-    def to_subgraph(self, begin, end, inclusive=(True,True), multigraph=False, edge_data=False, edge_timestamp_data=False, node_data=False):
+    def to_subgraph(self, begin, end, inclusive=(True,False), multigraph=False, edge_data=False, edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.
 
@@ -849,7 +892,8 @@ class ImpulseGraph(object):
         begin: int or float
         end: int or float
             Must be bigger than or equal to begin.
-        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end,
+            optional (default=(True,False))
         multigraph: bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
         edge_data: bool, optional (default= False)
@@ -894,6 +938,7 @@ class ImpulseGraph(object):
         >>> list(M.edges(data=True))
         [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
         """
+        
         iedges = self.__search_tree(begin, end, inclusive=inclusive)
 
         if multigraph:
@@ -902,13 +947,13 @@ class ImpulseGraph(object):
             G = Graph()
             
         if edge_data and edge_timestamp_data:
-            G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[3]))
+            G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[2]))
                              for iedge in iedges)
         elif edge_data:
             G.add_edges_from((iedge[0], iedge[1], self._adj[iedge.data[0]][iedge].copy())
                              for iedge in iedges)
         elif edge_timestamp_data:
-            G.add_edges_from((iedge[0], iedge[1], {'timestamp':iedge[3]})
+            G.add_edges_from((iedge[0], iedge[1], {'timestamp':iedge[2]})
                              for iedge in iedges)
         else:
 
@@ -926,7 +971,7 @@ class ImpulseGraph(object):
         Parameters
         ----------
         number_of_snapshots : integer
-            Number of snapshots to divide the interval graph into.
+            Number of snapshots to divide the impulse graph into.
             Must be bigger than 1.
         multigraph : bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
@@ -983,7 +1028,7 @@ class ImpulseGraph(object):
         """
 
         if number_of_snapshots < 2 or type(number_of_snapshots) is not int:
-            raise NetworkXError("IntervalGraph: number of snapshots must be an integer and 2 or bigger. "
+            raise NetworkXError("ImpulseGraph: number of snapshots must be an integer and 2 or bigger. "
                                 "{0} was passed.".format(number_of_snapshots))
 
         begin, end = self.interval()
@@ -1043,7 +1088,7 @@ class ImpulseGraph(object):
 
         For example
 
-        >>> G=dnx.IntervalGraph.load_from_txt("my_dygraph.txt", nodetype=int)
+        >>> G=dnx.ImpulseGraph.load_from_txt("my_dygraph.txt", nodetype=int)
 
         will attempt to convert all nodes to integer type.
 
@@ -1106,23 +1151,3 @@ class ImpulseGraph(object):
                 line += '\n'
 
                 file.write(line)
-
-def inInterval(t,begin,end,inclusive=(True,True)):
-    if begin is None:
-        begin = float('inf')
-    if end is None:
-        end = float('-inf')
-
-    if inclusive == (True,True):
-        return t >= begin and t <= end
-    if inclusive == (True,False):
-        return t >= begin and t < end
-    if inclusive == (False,True):
-        return t > begin and t <= end
-    if inclusive == (False,False):
-        return t > begin and t < end
-
-
-G = ImpulseGraph()
-G.add_edge(7,8,9)
-G.add_edges_from([(1, 2, 10), (2, 4, 11)], weight=3, color='blue')
