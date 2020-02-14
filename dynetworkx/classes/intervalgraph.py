@@ -4,6 +4,7 @@ from networkx.exception import NetworkXError
 from intervaltree import Interval, IntervalTree
 from networkx.classes.multigraph import MultiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
+from sortedcontainers import SortedList, SortedDict
 
 
 class IntervalGraph(object):
@@ -923,6 +924,122 @@ class IntervalGraph(object):
         for iv in iedges_to_remove:
             self.__remove_iedge(iv)
 
+    def degree(self, node, begin=None, end=None):
+        """Return the degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire interval graph)
+            Inclusive beginning time of the edge appearing in the interval graph.
+        end : int or float, optional (default= end of the entire interval graph)
+            Non-inclusive ending time of the edge appearing in the interval graph.
+
+        Returns
+        -------
+        Integer value of degree of specified node.
+
+        Examples
+        --------
+        >>> 
+        >>> G.add_edge(1, 2, 3, 5)
+        >>> G.add_edge(2, 3, 8, 11)
+        >>> G.degree(2)
+        2
+        >>> G.degree(2,2)
+        2
+        >>> G.degree(2,end=8)
+        1
+        """
+        return len(self.edges(u=node, begin=begin, end=end))
+
+    def mean_degree(self, begin=None, end=None):
+        """Return the arithmetic mean degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        begin : int or float, optional (default= beginning of the entire interval graph)
+            Inclusive beginning time of the edge appearing in the interval graph.
+        end : int or float, optional (default= end of the entire interval graph)
+            Non-inclusive ending time of the edge appearing in the interval graph.
+
+        Returns
+        -------
+        Float value of mean degree of graph.
+
+        Examples
+        --------
+        >>> 
+        >>> G.add_edge(1, 2, 3, 5)
+        >>> G.add_edge(2, 3, 8, 11)
+        >>> G.mean_degree()
+        1.33333
+        >>> G.mean_degree(6)
+        1.0
+        """
+        n = 0
+        l = 0
+        for node in self.nodes(begin=begin, end=end):
+            n += 1
+            l += self.degree(node,begin=begin,end=end)
+        return l/n
+
+    def degree_change(self, node, begin=None, end=None):
+        """Return the arithmetic mean degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire interval graph)
+            Inclusive beginning time of the edge appearing in the interval graph.
+        end : int or float, optional (default= end of the entire interval graph)
+            Non-inclusive ending time of the edge appearing in the interval graph.
+
+        Returns
+        -------
+        List of 2-tuples:
+            First indicating the time a degree change occurred,
+            Second indicating the degree after the change occured
+
+        Examples
+        --------
+        >>> 
+        >>> G.add_edge(1, 2, 3, 5)
+        >>> G.add_edge(2, 3, 8, 11)
+        >>> G.degree_change(2)
+        [(3, 1), (5, 0), (8, 1)]
+        >>> G.degree_change(2,6)
+        [(8, 1)]
+        """
+        if begin == None:
+            begin = self.tree.begin()
+        if end == None:
+            end = self.tree.end()
+            
+        current_degree = self.degree(node, begin=begin, end=begin)
+        sd = SortedDict()
+        output = []
+
+        #for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(u=node,begin=begin,end=end):
+            if edge.begin >= begin:
+                #if begin is in specified time period, add to SortedDict, with +1 to indicate begin
+                sd.setdefault((edge.begin,1),[]).append(edge.data)
+            if edge.end < end:
+                #if begin is in specified time period, add to SortedDict, with -1 to indicate begin
+                sd.setdefault((edge.end,-1),[]).append(edge.data)
+                
+        for time in sd:
+            for edge in sd[time]:
+                #iterate through SortedDict, only advancing current degree if edge was not counted on init
+                if time[0] != begin:
+                    current_degree += time[1]
+                output.append((time[0],current_degree))
+                
+        return output
+        
     def __remove_iedge(self, iedge):
         """Remove the interval edge from the interval graph.
 

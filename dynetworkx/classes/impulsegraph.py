@@ -6,6 +6,7 @@ from networkx.classes.multigraph import MultiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 
 class ImpulseGraph(object):
+    
     """Base class for undirected impulse graphs.
 
     The ImpulseGraph class allows any hashable object as a node
@@ -805,6 +806,113 @@ class ImpulseGraph(object):
         for edge in iedges:
             self.__remove_iedge(edge)
 
+    def degree(self, node, begin=None, end=None):
+        """Return the degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+            Inclusive beginning time of the edge appearing in the impulse graph.
+        end : int or float, optional (default= end of the entire impulse graph)
+            Non-inclusive ending time of the edge appearing in the impulse graph.
+
+        Returns
+        -------
+        Integer value of degree of specified node.
+
+        Examples
+        --------
+        >>> 
+        >>> G.add_edge(1, 2, 3)
+        >>> G.add_edge(2, 3, 8)
+        >>> G.degree(2)
+        2
+        >>> G.degree(2,2)
+        2
+        >>> G.degree(2,end=8)
+        1
+        """
+        return len(self.edges(u=node, begin=begin, end=end))
+
+    def mean_degree(self, begin=None, end=None):
+        """Return the arithmetic mean degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+            Inclusive beginning time of the edge appearing in the impulse graph.
+        end : int or float, optional (default= end of the entire impulse graph)
+            Non-inclusive ending time of the edge appearing in the impulse graph.
+
+        Returns
+        -------
+        Float value of mean degree of graph.
+
+        Examples
+        --------
+        >>> 
+        >>> G.add_edge(1, 2, 3)
+        >>> G.add_edge(2, 3, 8)
+        >>> G.mean_degree()
+        1.33333
+        >>> G.mean_degree(6)
+        1.0
+        """
+        n = 0
+        l = 0
+        for node in self.nodes(begin=begin, end=end):
+            n += 1
+            l += self.degree(node,begin=begin,end=end)
+        return l/n
+
+    def degree_change(self, node, begin=None, end=None):
+        """Return the arithmetic mean degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+            Inclusive beginning time of the edge appearing in the impulse graph.
+        end : int or float, optional (default= end of the entire impulse graph)
+            Non-inclusive ending time of the edge appearing in the impulse graph.
+
+        Returns
+        -------
+        List of 2-tuples:
+            First indicating the time a degree change occurred,
+            Second indicating the degree after the change occured
+
+        Examples
+        --------
+        >>> 
+        >>> G.add_edge(1, 2, 3)
+        >>> G.add_edge(2, 3, 8)
+        >>> G.degree_change(2)
+        [(3, 1), (5, 0), (8, 1)]
+        >>> G.degree_change(2,6)
+        [(8, 1)]
+        """
+        if begin == None:
+            begin = list(self.tree.keys())[0]
+        if end == None:
+            end = list(self.tree.keys())[-1]
+
+        d = {}
+        output = []
+
+        #for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(u=node,begin=begin,end=end,inclusive=(True,True)):
+            d.setdefault(edge[2],[]).append((edge[0],edge[1]))
+
+        #for each time in Dict add to output list the len of each value
+        for time in d:
+            output.append((time,len(d[time])))
+                
+        return output,d
+
     def __remove_iedge(self, iedge):
         """Remove the edge from the impulse graph.
 
@@ -1151,3 +1259,9 @@ class ImpulseGraph(object):
                 line += '\n'
 
                 file.write(line)
+
+
+###
+G = ImpulseGraph()
+G.add_edge(1, 2, 3)
+G.add_edge(2, 3, 8)
