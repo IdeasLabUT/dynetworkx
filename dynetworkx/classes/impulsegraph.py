@@ -806,7 +806,7 @@ class ImpulseGraph(object):
         for edge in iedges:
             self.__remove_iedge(edge)
 
-    def degree(self, node, begin=None, end=None):
+    def degree(self, node=None, begin=None, end=None, delta=False):
         """Return the degree of a specified node between time begin and end.
 
         Parameters
@@ -824,7 +824,7 @@ class ImpulseGraph(object):
 
         Examples
         --------
-        >>> 
+        >>> G = ImpulseGraph()
         >>> G.add_edge(1, 2, 3)
         >>> G.add_edge(2, 3, 8)
         >>> G.degree(2)
@@ -833,68 +833,25 @@ class ImpulseGraph(object):
         2
         >>> G.degree(2,end=8)
         1
-        """
-        return len(self.edges(u=node, begin=begin, end=end))
-
-    def mean_degree(self, begin=None, end=None):
-        """Return the arithmetic mean degree of a specified node between time begin and end.
-
-        Parameters
-        ----------
-        begin : int or float, optional (default= beginning of the entire impulse graph)
-            Inclusive beginning time of the edge appearing in the impulse graph.
-        end : int or float, optional (default= end of the entire impulse graph)
-            Non-inclusive ending time of the edge appearing in the impulse graph.
-
-        Returns
-        -------
-        Float value of mean degree of graph.
-
-        Examples
-        --------
-        >>> 
-        >>> G.add_edge(1, 2, 3)
-        >>> G.add_edge(2, 3, 8)
         >>> G.mean_degree()
         1.33333
-        >>> G.mean_degree(6)
-        1.0
+        >>> G.degree(2,delta=True)
+        [(8, 1), (3, 1)]
         """
-        n = 0
-        l = 0
-        for node in self.nodes(begin=begin, end=end):
-            n += 1
-            l += self.degree(node,begin=begin,end=end)
-        return l/n
+        #no specified node, return mean degree
+        if node == None:
+            n = 0
+            l = 0
+            for node in self.nodes(begin=begin, end=end):
+                n += 1
+                l += self.degree(node,begin=begin,end=end)
+            return l/n
 
-    def degree_change(self, node, begin=None, end=None):
-        """Return the arithmetic mean degree of a specified node between time begin and end.
+        #specified node, no degree_change, return degree
+        if delta == False:
+            return len(self.edges(u=node, begin=begin, end=end))
 
-        Parameters
-        ----------
-        node : Nodes can be, for example, strings or numbers.
-            Nodes must be hashable (and not None) Python objects.
-        begin : int or float, optional (default= beginning of the entire impulse graph)
-            Inclusive beginning time of the edge appearing in the impulse graph.
-        end : int or float, optional (default= end of the entire impulse graph)
-            Non-inclusive ending time of the edge appearing in the impulse graph.
-
-        Returns
-        -------
-        List of 2-tuples:
-            First indicating the time a degree change occurred,
-            Second indicating the degree after the change occured
-
-        Examples
-        --------
-        >>> 
-        >>> G.add_edge(1, 2, 3)
-        >>> G.add_edge(2, 3, 8)
-        >>> G.degree_change(2)
-        [(3, 1), (5, 0), (8, 1)]
-        >>> G.degree_change(2,6)
-        [(8, 1)]
-        """
+        #delta == True, return list of changes
         if begin == None:
             begin = list(self.tree.keys())[0]
         if end == None:
@@ -911,7 +868,7 @@ class ImpulseGraph(object):
         for time in d:
             output.append((time,len(d[time])))
                 
-        return output,d
+        return output
 
     def __remove_iedge(self, iedge):
         """Remove the edge from the impulse graph.
