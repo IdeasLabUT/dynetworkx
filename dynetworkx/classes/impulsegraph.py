@@ -779,7 +779,71 @@ class ImpulseGraph(object):
 
         for edge in iedges:
             self.__remove_iedge(edge)
+            
+    def degree(self, node=None, begin=None, end=None, delta=False):
+        """Return the degree of a specified node between time begin and end.
 
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+            Inclusive beginning time of the edge appearing in the impulse graph.
+        end : int or float, optional (default= end of the entire impulse graph)
+            Non-inclusive ending time of the edge appearing in the impulse graph.
+
+        Returns
+        -------
+        Integer value of degree of specified node.
+
+        Examples
+        --------
+        >>> G = ImpulseGraph()
+        >>> G.add_edge(1, 2, 3)
+        >>> G.add_edge(2, 3, 8)
+        >>> G.degree(2)
+        2
+        >>> G.degree(2,2)
+        2
+        >>> G.degree(2,end=8)
+        1
+        >>> G.mean_degree()
+        1.33333
+        >>> G.degree(2,delta=True)
+        [(8, 1), (3, 1)]
+        """
+        #no specified node, return mean degree
+        if node == None:
+            n = 0
+            l = 0
+            for node in self.nodes(begin=begin, end=end):
+                n += 1
+                l += self.degree(node,begin=begin,end=end)
+            return l/n
+
+        #specified node, no degree_change, return degree
+        if delta == False:
+            return len(self.edges(u=node, begin=begin, end=end))
+
+        #delta == True, return list of changes
+        if begin == None:
+            begin = list(self.tree.keys())[0]
+        if end == None:
+            end = list(self.tree.keys())[-1]
+
+        d = {}
+        output = []
+
+        #for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(u=node,begin=begin,end=end,inclusive=(True,True)):
+            d.setdefault(edge[2],[]).append((edge[0],edge[1]))
+
+        #for each time in Dict add to output list the len of each value
+        for time in d:
+            output.append((time,len(d[time])))
+                
+        return output
+    
     def __remove_iedge(self, iedge):
         """Remove the interval edge from the impulse graph.
 
@@ -1043,7 +1107,7 @@ class ImpulseGraph(object):
 
         For example
 
-        >>> G=dnx.IntervalGraph.load_from_txt("my_dygraph.txt", nodetype=int)
+        >>> G=dnx.ImpulseGraph.load_from_txt("my_dygraph.txt", nodetype=int)
 
         will attempt to convert all nodes to integer type.
 
@@ -1092,6 +1156,23 @@ class ImpulseGraph(object):
         return G
 
     def save_to_txt(self, path, delimiter=" "):
+        """Write impulse graph to path.
+           Every line in the file must be an edge in the following format: "node node timestamp".
+           Timestamps must be integers or floats.
+           Nodes can be any hashable objects.
+
+        Parameters
+        ----------
+        path : string or file
+           Filename to read.
+
+        delimiter : string, optional
+           Separator for node labels.  The default is whitespace. Cannot be =.
+
+        Examples
+        --------
+        >>> G.save_to_txt("my_dygraph.txt")
+        """
         if len(self) == 0:
             raise ValueError("Given graph is empty.")
 
@@ -1121,8 +1202,3 @@ def inInterval(t,begin,end,inclusive=(True,True)):
         return t > begin and t <= end
     if inclusive == (False,False):
         return t > begin and t < end
-
-
-G = ImpulseGraph()
-G.add_edge(7,8,9)
-G.add_edges_from([(1, 2, 10), (2, 4, 11)], weight=3, color='blue')

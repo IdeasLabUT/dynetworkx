@@ -343,7 +343,14 @@ NetworkX's `MultiGraph`, if that is what you need.
 Importing from text file
 ------------------------
 
-Using `load_from_txt` you can also read in an interval graph from a text file in an
-specific edge-list format. For more detail checkout the documentation on
+Using `load_from_txt` you can also read in an IntervalGraph or ImpulseGraph
+from a text file in a specific edge-list format. For more detail checkout the documentation on
 :meth:`IntervalGraph.load_from_txt`.
+
+Saving to text file
+-------------------
+
+Using `save_to_txt` you can also write an IntervalGraph or ImpulseGraph
+to a text file in a specific edge-list format. For more detail checkout the documentation on
+:meth:`IntervalGraph.save_to_txt`.
 
