@@ -1283,7 +1283,97 @@ class IntervalGraph(object):
             return snapshots, snapshot_len
 
         return snapshots
+    
+    @staticmethod
+    def from_snapshots(snapshotgraph, begin=0, period=1):
+        """Convert a SnapshotGraph to a IntervalGraph.
 
+        Parameters
+        ----------
+        snapshotgraph : SnapshotGraph
+
+        begin : integer or double
+        Timestamp of first snapshot.
+
+        period : integer or double
+        Time between each successive snapshot.
+
+        Returns
+        -------
+        G: IntervalGraph
+            The graph corresponding to the lines in edge list.
+
+        Examples
+        --------
+        >>> sg = SnapshotGraph()
+        >>> sg.add_snapshot([(1, 2), (1, 3)])
+        >>> sg.add_snapshot([(1, 4), (1, 3)])
+        >>> sg.add_edges_from([(5, 6), (7, 6)], [0])
+        >>> sg.add_edges_from([(8, 9), (10, 11)], [0, 1])
+        >>> sg.add_edges_from([(8,9)],weight=1)
+
+        >>> ig = IntervalGraph.from_snapshots(sg,0,1)
+        """
+        G = IntervalGraph()
+        edge_dict = {}
+        
+        for snapshot in snapshotgraph.get():
+            for edge in snapshot.edges(data=True):
+                if (edge[0],edge[1]) in edge_dict:
+                    edge_dict[(edge[0],edge[1])] = (edge_dict[(edge[0],edge[1])][0], edge_dict[(edge[0],edge[1])][1] + period, edge[2])
+                else:
+                    edge_dict[(edge[0],edge[1])] = (begin, begin + period, edge[2])
+                    
+            begin += period
+            
+        for edge in edge_dict:
+            G.add_edge(edge[0],edge[1],edge_dict[edge][0],edge_dict[edge][1],**edge_dict[edge][2])
+
+        return G
+
+    @staticmethod
+    def from_networkx_graph(graph, begin='begin', end='end'):
+        """Convert a NetworkX Graph to a IntervalGraph.
+
+        Parameters
+        ----------
+        graph : NetworkX Graph
+
+        begin : string
+        Attribute for beginning timestamp in NetworkX Graph.
+
+        end : string
+        Attribute for ending timestamp in NetworkX Graph.
+
+        Returns
+        -------
+        G: IntervalGraph
+            The graph corresponding to the lines in edge list.
+
+        Examples
+        --------
+
+        graph = nx.Graph()
+        graph.add_edge(1,2,begin=10,end=11,weight=1.5)
+        graph.add_edge(2,3,begin=11,end=13)
+
+        ig = IntervalGraph.from_networkx_graph(graph)
+      """
+        
+        G = IntervalGraph()
+
+        for edge in graph.edges(data=True):
+            attr = {}
+            
+            for key in edge[2]:
+                if key != begin and key != end:
+                    attr[key] = edge[2][key]
+  
+            G.add_edge(edge[0],edge[1],edge[2][begin],edge[2][end],**attr)
+
+        return G
+    
+    
     @staticmethod
     def load_from_txt(path, delimiter=" ", nodetype=None, intervaltype=float, comments="#"):
         """Read interval graph in from path.
@@ -1307,7 +1397,7 @@ class IntervalGraph(object):
            Marker for comment lines
 
         delimiter : string, optional
-           Separator for node labels.  The default is whitespace.
+           Separator for node labels.  The default is whitespace. Cannot be =.
 
         Returns
         -------
@@ -1332,6 +1422,9 @@ class IntervalGraph(object):
 
         ig = IntervalGraph()
 
+        if delimiter == '=':
+            raise ValueError("Delimiter cannot be =.")
+
         with open(path, 'r') as file:
             for line in file:
                 p = line.find(comments)
@@ -1341,7 +1434,15 @@ class IntervalGraph(object):
                     continue
 
                 line = line.rstrip().split(delimiter)
-                u, v, begin, end = line
+                u = line[0]
+                v = line[1]
+                begin = line[2]
+                end = line[3]
+
+                edgedata = {}
+                for data in line[4:]:
+                    key, value = data.split('=')
+                    edgedata[key] = value
 
                 if nodetype is not None:
                     try:
@@ -1356,40 +1457,37 @@ class IntervalGraph(object):
                 except:
                     raise TypeError("Failed to convert interval time to {}".format(intervaltype))
 
-                ig.add_edge(u, v, begin, end)
+                ig.add_edge(u, v, begin, end, **edgedata)
 
         return ig
 
-    def save_to_txt(self, path, delimiter=" "):
-        """Write interval graph to path.
-           Every line in the file must be an edge in the following format: "node node begin end".
-           Begin, end must be integers or floats.
-           Nodes can be any hashable objects.
+        def save_to_txt(self, path, delimiter=" "):
+            """Write interval graph to path.
+               Every line in the file will be an edge in the following format: "node node begin end".
 
-        Parameters
-        ----------
-        path : string or file
-           Filename to read.
+            Parameters
+            ----------
+            path : string or file
+               Filename to write.
 
-        delimiter : string, optional
-           Separator for node labels.  The default is whitespace. Cannot be =.
+            delimiter : string, optional
+               Separator for node labels.  The default is whitespace. Cannot be =.
 
-        Examples
-        --------
-        >>> G.save_to_txt("my_dygraph.txt")
-        """
-        if len(self) == 0:
-            raise ValueError("Given graph is empty.")
+            Examples
+            --------
+            >>> G.save_to_txt("my_dygraph.txt")
+            """
+            if len(self) == 0:
+                raise ValueError("Given graph is empty.")
 
-        if delimiter == '=':
-            raise ValueError("Delimiter cannot be =.")
+            if delimiter == '=':
+                raise ValueError("Delimiter cannot be =.")
         
-        with open(path, 'w') as file:
-            for edge in self.edges(data=True):
-                line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
-                for key in edge[1]:
-                    line += delimiter + str(key) + '=' + str(edge[1][key])
-                line += '\n'
+            with open(path, 'w') as file:
+                for edge in self.edges(data=True):
+                    line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
+                    for key in edge[1]:
+                        line += delimiter + str(key) + '=' + str(edge[1][key])
+                    line += '\n'
 
-                file.write(line)
-    
+                    file.write(line)

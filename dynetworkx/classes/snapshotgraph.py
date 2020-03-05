@@ -1,5 +1,6 @@
 from networkx.classes.graph import Graph
-
+import numpy as np
+from networkx import from_numpy_matrix, to_numpy_matrix, adjacency_matrix
 
 class SnapshotGraph(object):
     def __init__(self, **attr):
@@ -761,3 +762,89 @@ class SnapshotGraph(object):
 
         for g in graph_list:
                 g.add_edges_from(ebunch, **attrs)
+
+    @staticmethod
+    def load_from_txt(path, delimiter=";", comments="#"):
+        """Read snapshot graph in from path.
+           Every line in the file must be an adjacency matrix, with rows separated by delimiter.
+
+        Parameters
+        ----------
+        path : string or file
+           Filename to read.
+
+        comments : string, optional
+           Marker for comment lines
+
+        delimiter : string, optional
+           Separator for rows in matrix.  The default is ;. Cannot be whitespace or \n.
+
+        Returns
+        -------
+        G: SnapshotGraph
+            The graph corresponding to the list of adjacency matrices.
+
+        Examples
+        --------
+        >>> G=dnx.Snapshotgraph.load_from_txt("my_dygraph.txt")
+        """
+
+        if delimiter == ' ' or delimiter == '\n':
+            raise ValueError("Delimiter cannot be "+delimiter+".")
+   
+        sg = SnapshotGraph()
+
+        with open(path, 'r') as file:
+            for line in file:
+                p = line.find(comments)
+                if p >= 0:
+                    line = line[:p]
+                if not len(line):
+                    continue
+
+                if delimiter != ";":
+                    line = line.replace(delimiter,";")
+
+                g = from_numpy_matrix(np.matrix(line))
+                sg.insert(g)
+
+        return sg
+
+    def save_to_txt(self, path, delimiter=";"):
+        """Write snapshot graph to path.
+           Every line in the file will be an adjacency matrix.
+
+        Parameters
+        ----------
+        path : string or file
+           Filename to write.
+
+        delimiter : string, optional
+           Separator for rows in matrix.  The default is ;. Cannot be whitespace or \n.
+
+        Examples
+        --------
+        >>> G.save_to_txt("my_dygraph.txt")
+        """
+        
+        if len(self) == 0:
+            raise ValueError("Given graph is empty.")
+
+        if delimiter == ' ' or delimiter == '\n':
+            raise ValueError("Delimiter cannot be "+delimiter+".")
+
+        nodelist = set()
+        with open(path, 'w') as file:
+
+            for graph in self.get():
+                for node in graph.nodes():
+                    nodelist.add(node)
+            
+            for graph in self.get():
+                for node in nodelist:
+                    if node not in graph.nodes():
+                        graph.add_node(node)
+                m = adjacency_matrix(graph).todense()
+                line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m,dtype=str)) + '\n'
+
+                file.write(line)      
