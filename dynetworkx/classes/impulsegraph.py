@@ -632,7 +632,7 @@ class ImpulseGraph(object):
         begin, end = self.__validate_interval(begin, end)
 
         for edge in self._adj[u].keys():
-            if edge[1] == v and inInterval(edge[3],begin, end, inclusive=inclusive):
+            if edge[1] == v and __inInterval(edge[3],begin, end, inclusive=inclusive):
                 return True
         return False
 
@@ -1188,17 +1188,35 @@ class ImpulseGraph(object):
 
                 file.write(line)
 
-def inInterval(t,begin,end,inclusive=(True,True)):
-    if begin is None:
-        begin = float('inf')
-    if end is None:
-        end = float('-inf')
+    def __inInterval(t,begin,end,inclusive=(True,True)):
+        """
 
-    if inclusive == (True,True):
-        return t >= begin and t <= end
-    if inclusive == (True,False):
-        return t >= begin and t < end
-    if inclusive == (False,True):
-        return t > begin and t <= end
-    if inclusive == (False,False):
-        return t > begin and t < end
+       Parameters
+       ----------
+       t: int or float, timestamp
+       begin: int or float
+            Beginning time of Interval.
+       end: int or float
+            Ending time of Interval.
+            Must be bigger than or equal begin.
+       inclusive: 2-tuple boolean that determines inclusivity of begin and end
+
+       Returns
+       -------
+
+       Returns True if t is in the interval (begin,end). Otherwise False.
+       
+       """
+        if begin is None:
+            begin = float('inf')
+        if end is None:
+            end = float('-inf')
+
+        if inclusive == (True,True):
+            return t >= begin and t <= end
+        if inclusive == (True,False):
+            return t >= begin and t < end
+        if inclusive == (False,True):
+            return t > begin and t <= end
+        if inclusive == (False,False):
+            return t > begin and t < end
