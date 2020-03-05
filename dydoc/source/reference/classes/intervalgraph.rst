@@ -65,3 +65,11 @@ Loading an interval graph
    :toctree: generated/
 
    IntervalGraph.load_from_txt
+   IntervalGraph.save_to_txt
+   
+Analyzing interval graphs
+-------------------------
+.. autosummary::
+   :toctree: generated/
+   
+   IntervalGraph.degree
