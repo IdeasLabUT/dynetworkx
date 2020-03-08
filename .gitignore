@@ -25,7 +25,9 @@ doc/reference/classes/generated
 doc/reference/readwrite/generated
 doc/path.to.file
 
+# Generated while building dydoc
 dydoc/build/*
+dydoc/source/reference/classes/generated
 
 examples/advanced/edgelist.utf-8
 examples/basic/grid.edgelist
