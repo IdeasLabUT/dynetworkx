@@ -1451,10 +1451,9 @@ class IntervalGraph(object):
             G.add_edge(edge[0],edge[1],edge[2][begin],edge[2][end],**attr)
 
         return G
-    
-    
+
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=None, intervaltype=float, comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, intervaltype=float, comments="#"):
         """Read interval graph in from path.
            Every line in the file must be an edge in the following format: "node node begin end".
            Both interval times must be integers or floats.
@@ -1465,7 +1464,7 @@ class IntervalGraph(object):
         path : string or file
            Filename to read.
 
-        nodetype : Python type, optional
+        nodetype : Python type, optional (default= int)
            Convert nodes to this type.
 
         intervaltype : Python type, optional (default= float)
@@ -1476,7 +1475,7 @@ class IntervalGraph(object):
            Marker for comment lines
 
         delimiter : string, optional
-           Separator for node labels.  The default is whitespace. Cannot be =.
+           Separator for node labels.  The default is whitespace.
 
         Returns
         -------
@@ -1491,18 +1490,15 @@ class IntervalGraph(object):
 
         For example
 
-        >>> G=dnx.IntervalGraph.load_from_txt("my_dygraph.txt", nodetype=int)
+        >>> G=dnx.IntervalGraph.load_from_txt("my_dygraph.txt", nodetype=float)
 
-        will attempt to convert all nodes to integer type.
+        will attempt to convert all nodes to float type.
 
         Since nodes must be hashable, the function nodetype must return hashable
         types (e.g. int, float, str, frozenset - or tuples of those, etc.)
         """
 
         ig = IntervalGraph()
-
-        if delimiter == '=':
-            raise ValueError("Delimiter cannot be =.")
 
         with open(path, 'r') as file:
             for line in file:
@@ -1521,14 +1517,25 @@ class IntervalGraph(object):
                 edgedata = {}
                 for data in line[4:]:
                     key, value = data.split('=')
+
+                    try:
+                        value = float(value)
+                    except:
+                        pass
                     edgedata[key] = value
 
-                if nodetype is not None:
+                if nodetype is not int:
                     try:
                         u = nodetype(u)
                         v = nodetype(v)
                     except:
                         raise TypeError("Failed to convert node to {0}".format(nodetype))
+                else:
+                    try:
+                        u = int(u)
+                        v = int(v)
+                    except:
+                        pass
 
                 try:
                     begin = intervaltype(begin)
@@ -1540,33 +1547,35 @@ class IntervalGraph(object):
 
         return ig
 
-        def save_to_txt(self, path, delimiter=" "):
-            """Write interval graph to path.
-               Every line in the file will be an edge in the following format: "node node begin end".
+    def save_to_txt(self, path, delimiter=" "):
+        """Write interval graph to path.
+           Every line in the file must be an edge in the following format: "node node begin end".
+           Begin, end must be integers or floats.
+           Nodes can be any hashable objects.
 
-            Parameters
-            ----------
-            path : string or file
-               Filename to write.
+        Parameters
+        ----------
+        path : string or file
+           Filename to read.
 
-            delimiter : string, optional
-               Separator for node labels.  The default is whitespace. Cannot be =.
+        delimiter : string, optional
+           Separator for node labels.  The default is whitespace. Cannot be =.
 
-            Examples
-            --------
-            >>> G.save_to_txt("my_dygraph.txt")
-            """
-            if len(self) == 0:
-                raise ValueError("Given graph is empty.")
+        Examples
+        --------
+        >>> G.save_to_txt("my_dygraph.txt")
+        """
+        if len(self) == 0:
+            raise ValueError("Given graph is empty.")
 
-            if delimiter == '=':
-                raise ValueError("Delimiter cannot be =.")
-        
-            with open(path, 'w') as file:
-                for edge in self.edges(data=True):
-                    line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
-                    for key in edge[1]:
-                        line += delimiter + str(key) + '=' + str(edge[1][key])
-                    line += '\n'
+        if delimiter == '=':
+            raise ValueError("Delimiter cannot be =.")
 
-                    file.write(line)
+        with open(path, 'w') as file:
+            for edge in self.edges(data=True):
+                line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
+                for key in edge[1]:
+                    line += delimiter + str(key) + '=' + str(edge[1][key])
+                line += '\n'
+
+                file.write(line)

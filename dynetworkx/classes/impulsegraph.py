@@ -1070,7 +1070,7 @@ class ImpulseGraph(object):
         return snapshots
 
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=None, timestamptype=float, comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, comments="#"):
         """Read impulse graph in from path.
            Every line in the file must be an edge in the following format: "node node timestamp".
            Timestamps must be integers or floats.
@@ -1081,7 +1081,7 @@ class ImpulseGraph(object):
         path : string or file
            Filename to read.
 
-        nodetype : Python type, optional
+        nodetype : Python type, optional (default= int)
            Convert nodes to this type.
 
         timestamptype : Python type, optional (default= float)
@@ -1137,21 +1137,32 @@ class ImpulseGraph(object):
                 edgedata = {}
                 for data in line[3:]:
                     key, value = data.split('=')
+
+                    try:
+                        value = float(value)
+                    except:
+                        pass
                     edgedata[key] = value
 
-                if nodetype is not None:
+                if nodetype is not int:
                     try:
                         u = nodetype(u)
                         v = nodetype(v)
                     except:
                         raise TypeError("Failed to convert node to {0}".format(nodetype))
+                else:
+                    try:
+                        u = int(u)
+                        v = int(v)
+                    except:
+                        pass
 
                 try:
                     t = timestamptype(t)
                 except:
                     raise TypeError("Failed to convert interval time to {}".format(timestamptype))
 
-                G.add_edge(u,v,t,**edgedata)
+                G.add_edge(u, v, t, **edgedata)
 
         return G
 
@@ -1164,7 +1175,7 @@ class ImpulseGraph(object):
         Parameters
         ----------
         path : string or file
-           Filename to write.
+           Filename to read.
 
         delimiter : string, optional
            Separator for node labels.  The default is whitespace. Cannot be =.
@@ -1178,7 +1189,7 @@ class ImpulseGraph(object):
 
         if delimiter == '=':
             raise ValueError("Delimiter cannot be =.")
-        
+
         with open(path, 'w') as file:
             for edge in self.edges(data=True):
                 line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])

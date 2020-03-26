@@ -1,6 +1,6 @@
 from networkx.classes.graph import Graph
 import numpy as np
-from networkx import from_numpy_matrix, to_numpy_matrix, adjacency_matrix
+from networkx import adjacency_matrix, from_numpy_array
 
 class SnapshotGraph(object):
     def __init__(self, **attr):
@@ -801,11 +801,12 @@ class SnapshotGraph(object):
                     line = line[:p]
                 if not len(line):
                     continue
+                line = line.strip()
+                matrix = []
+                for row in line.split(delimiter):
+                    matrix.append(row.split(' '))
 
-                if delimiter != ";":
-                    line = line.replace(delimiter,";")
-
-                g = from_numpy_matrix(np.matrix(line))
+                g = from_numpy_array(np.array(matrix))
                 sg.insert(g)
 
         return sg
@@ -847,4 +848,4 @@ class SnapshotGraph(object):
                 m = adjacency_matrix(graph).todense()
                 line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m,dtype=str)) + '\n'
 
-                file.write(line)      
+                file.write(line)
