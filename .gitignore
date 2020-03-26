@@ -56,3 +56,4 @@ networkx.egg-info/
 
 # Project testing file for Makan
 dynetworkx/classes/test.py
+DyNetworkX.egg-info/
