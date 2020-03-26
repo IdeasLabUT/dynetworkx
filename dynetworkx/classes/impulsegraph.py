@@ -1164,7 +1164,7 @@ class ImpulseGraph(object):
         Parameters
         ----------
         path : string or file
-           Filename to read.
+           Filename to write.
 
         delimiter : string, optional
            Separator for node labels.  The default is whitespace. Cannot be =.
