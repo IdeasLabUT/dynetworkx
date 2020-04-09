@@ -95,7 +95,7 @@ class SnapshotGraph(object):
         except TypeError:
             return False
 
-    def insert(self, graph, snap_len=None, num_in_seq=None):
+    def insert(self, graph, snap_len=1, num_in_seq=None):
         """Insert a graph into the snapshot graph, with options for inserting at a given index, with some snapshot length.
 
         Parameters
@@ -153,7 +153,6 @@ class SnapshotGraph(object):
         --------
         >>> G = dnx.SnapshotGraph()
         >>> G.add_snapshot([(1, 4), (1, 3)])
-
         """
         if not graph:
             g = Graph()

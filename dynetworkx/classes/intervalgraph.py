@@ -251,11 +251,8 @@ class IntervalGraph(object):
         NetworkX Graphs, though one should be careful that the hash
         doesn't change on mutables.
         """
-        if node_for_adding not in self._node:
-            self._adj[node_for_adding] = {}
-            self._node[node_for_adding] = attr
-        else:  # update attr even if node already exists
-            self._node[node_for_adding].update(attr)
+        self._node.setdefault(node_for_adding,attr).update(attr)
+        self._adj.setdefault(node_for_adding,{})
 
     def add_nodes_from(self, nodes_for_adding, **attr):
         """Add multiple nodes.
@@ -293,6 +290,12 @@ class IntervalGraph(object):
         >>> G.add_nodes_from([(1, dict(size=11)), (2, {'color':'blue'})])
         """
         for n in nodes_for_adding:
+            if isinstance(n,tuple) and isinstance(n[1],dict):
+                self.add_node(n[0],**attr)
+                self._node[n[0]].update(n[1])
+            else: self.add_node(n,**attr)
+        '''
+        for n in nodes_for_adding:
             # keep all this inside try/except because
             # CPython throws TypeError on n not in self._node,
             # while pre-2.7.5 ironpython throws on self._adj[n]
@@ -311,7 +314,7 @@ class IntervalGraph(object):
                 else:
                     self._node[nn].update(attr)
                     self._node[nn].update(ndict)
-
+        '''
     def number_of_nodes(self, begin=None, end=None):
         """Return the number of nodes in the interval graph between the given interval.
 
@@ -379,7 +382,7 @@ class IntervalGraph(object):
         Examples
         --------
         >>> G = dnx.IntervalGraph()
-        >>> G.add_ndoe(1)
+        >>> G.add_node(1)
         >>> G.has_node(1)
         True
 
@@ -398,22 +401,24 @@ class IntervalGraph(object):
         >>> G.has_node(3, end=2) # end is non-inclusive
         False
         """
-        try:
-            node_exists = n in self._node
-        except TypeError:
-            node_exists = False
 
-        if (begin is None and end is None) or not node_exists:
-            return node_exists
+        if n not in self._node:
+            return False
+
+        if begin is None and end is None:
+            return True
+
+        if begin is None and end < self.tree.begin():
+            return False
+
+        if begin is not None and end is not None and end < begin:
+            return False
 
         begin, end = self.__validate_interval(begin, end)
 
-        iedges = self._adj[n].keys()
-
-        for iv in iedges:
-            if iv.overlaps(begin=begin, end=end):
+        for edge in self.__search_tree(begin, end):
+            if n == edge[2][0] or n == edge[2][1]:
                 return True
-
         return False
 
     def nodes(self, begin=None, end=None, data=False, default=None):
@@ -603,12 +608,11 @@ class IntervalGraph(object):
         iedge = Interval(begin, end, (u, v))
 
         # add nodes
-        if u not in self._node:
-            self._adj[u] = {}
-            self._node[u] = {}
-        if v not in self._node:
-            self._adj[v] = {}
-            self._node[v] = {}
+
+        self._adj.setdefault(u, {})
+        self._adj.setdefault(v, {})
+        self._node.setdefault(u, {})
+        self._node.setdefault(v, {})
 
         # add edge
         try:
@@ -924,84 +928,6 @@ class IntervalGraph(object):
         for iv in iedges_to_remove:
             self.__remove_iedge(iv)
             
-    def degree(self, node=None, begin=None, end=None, delta=False):
-        """Return the degree of a specified node between time begin and end.
-
-        Parameters
-        ----------
-        node : Nodes can be, for example, strings or numbers, optional.
-            Nodes must be hashable (and not None) Python objects.
-        begin : int or float, optional (default= beginning of the entire interval graph)
-            Inclusive beginning time of the edge appearing in the interval graph.
-        end : int or float, optional (default= end of the entire interval graph)
-            Non-inclusive ending time of the edge appearing in the interval graph.
-
-        Returns
-        -------
-        Integer value of degree of specified node.
-        If no node is specified, returns float mean degree value of graph.
-        If delta is True, return list of tuples.
-            First indicating the time a degree change occurred,
-            Second indicating the degree after the change occured
-
-        Examples
-        --------
-        >>> G = IntervalGraph()
-        >>> G.add_edge(1, 2, 3, 5)
-        >>> G.add_edge(2, 3, 8, 11)
-        >>> G.degree(2)
-        2
-        >>> G.degree(2,2)
-        2
-        >>> G.degree(2,end=8)
-        1
-        >>> G.degree()
-        1.33333
-        >>> G.degree(2,delta=True)
-        [(3, 1), (5, 0), (8, 1)]
-        """
-        
-        #no specified node, return mean degree
-        if node == None:
-            n = 0
-            l = 0
-            for node in self.nodes(begin=begin, end=end):
-                n += 1
-                l += self.degree(node,begin=begin,end=end)
-            return l/n
-
-        #specified node, no degree_change, return degree
-        if delta == False:
-            return len(self.edges(u=node, begin=begin, end=end))
-
-        #delta == True, return list of changes
-        if begin == None:
-            begin = self.tree.begin()
-        if end == None:
-            end = self.tree.end()
-            
-        current_degree = self.degree(node, begin=begin, end=begin)
-        sd = SortedDict()
-        output = []
-
-        #for each edge determine if the begin and/or end value is in specified time period
-        for edge in self.edges(u=node,begin=begin,end=end):
-            if edge.begin >= begin:
-                #if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin,1),[]).append(edge.data)
-            if edge.end < end:
-                #if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end,-1),[]).append(edge.data)
-                
-        for time in sd:
-            for edge in sd[time]:
-                #iterate through SortedDict, only advancing current degree if edge was not counted on init
-                if time[0] != begin:
-                    current_degree += time[1]
-                output.append((time[0],current_degree))
-                
-        return output
-
     def degree(self, node=None, begin=None, end=None, delta=False):
         """Return the degree of a specified node between time begin and end.
 

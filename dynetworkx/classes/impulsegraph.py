@@ -106,7 +106,7 @@ class ImpulseGraph(object):
     the edge data and holds edge attribute values keyed by attribute names.
     """
 
-    def __init__(self, name='',**attr):
+    def __init__(self,**attr):
         """Initialize an interval graph with edges, name, or graph attributes.
 
         Parameters
@@ -126,10 +126,23 @@ class ImpulseGraph(object):
         self.graph = {}  # dictionary for graph attributes
         self._node = {}
         self._adj = {}
-        self.name = name
         self.edgeid = 0
         
         self.graph.update(attr)
+
+    @property
+    def name(self):
+        """String identifier of the interval graph.
+
+        This interval graph attribute appears in the attribute dict IG.graph
+        keyed by the string `"name"`. as well as an attribute (technically
+        a property) `IG.name`. This is entirely user controlled.
+        """
+        return self.graph.get('name', '')
+
+    @name.setter
+    def name(self, s):
+        self.graph['name'] = s
 
     def __str__(self):
         """Return the interval graph name.
@@ -359,7 +372,7 @@ class ImpulseGraph(object):
         False
         """
         
-        if n not in G._node:
+        if n not in self._node:
             return False
 
         if begin is None and end is None:
@@ -367,13 +380,9 @@ class ImpulseGraph(object):
         
         begin, end = self.__validate_interval(begin, end)
 
-        inodes = set()
         for edge in self.__search_tree(begin, end,inclusive=inclusive):
-            inodes.add(edge[0])
-            inodes.add(edge[1])
-                
-        if n in inodes:
-            return True
+            if n == edge[0] or n == edge[1]:
+                return True
         return False
         
     def nodes(self, begin=None, end=None, inclusive=(True,True),data=False, default=None):
@@ -632,7 +641,7 @@ class ImpulseGraph(object):
         begin, end = self.__validate_interval(begin, end)
 
         for edge in self._adj[u].keys():
-            if edge[1] == v and __inInterval(edge[3],begin, end, inclusive=inclusive):
+            if edge[1] == v and self.__in_interval(edge[3],begin, end, inclusive=inclusive):
                 return True
         return False
 
@@ -718,16 +727,16 @@ class ImpulseGraph(object):
         >>> G.edges(u=1, begin=2, end=9, data="weight")
         [((1, 3, 4), 8)]
         """
-        
+
         iedges = []
         for edge in self.__search_tree(begin, end, inclusive=inclusive):
-            if u is not None and v is not None:
-                if u == edge[0] and v == edge[1]:
-                    iedges.append(edge)
-            elif u is not None:
-                if u == edge[0]:
-                    iedges.append(edge)
-            else:
+            if u is not None and v is not None and u == edge[0] and v == edge[1]:
+                iedges.append(edge)
+            elif (u is not None and v is None) and (u == edge[0] or u == edge[1]):
+                iedges.append(edge)
+            elif (u is None and v is not None) and (v == edge[0] or v == edge[1]):
+                iedges.append(edge)
+            elif u is None and v is None:
                 iedges.append(edge)
 
         if data is False:
@@ -738,7 +747,7 @@ class ImpulseGraph(object):
 
         return [((edge[0],edge[1],edge[3]), self._adj[edge[0]][edge][data]) if data in self._adj[edge[0]][edge]
                 else ((edge[0],edge[1],edge[3]),default) for edge in iedges]
-    
+
     def remove_edge(self, u, v, begin=None, end=None, inclusive=(True,True)):
         """Remove the edge between u and v in the impulse graph,
         during the given interval.
@@ -780,7 +789,7 @@ class ImpulseGraph(object):
         for edge in iedges:
             self.__remove_iedge(edge)
             
-    def degree(self, node=None, begin=None, end=None, delta=False):
+    def degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True,True)):
         """Return the degree of a specified node between time begin and end.
 
         Parameters
@@ -791,6 +800,9 @@ class ImpulseGraph(object):
             Inclusive beginning time of the edge appearing in the impulse graph.
         end : int or float, optional (default= end of the entire impulse graph)
             Non-inclusive ending time of the edge appearing in the impulse graph.
+        delta : boolean, optional (default= False)
+            Returns list of 2-tuples, first element is the timestamp, second is the node of changing degree.
+        inclusive : 2-tuple boolean that determines inclusivity of begin and end
 
         Returns
         -------
@@ -798,7 +810,7 @@ class ImpulseGraph(object):
 
         Examples
         --------
-        >>> G = ImpulseGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_edge(1, 2, 3)
         >>> G.add_edge(2, 3, 8)
         >>> G.degree(2)
@@ -807,23 +819,23 @@ class ImpulseGraph(object):
         2
         >>> G.degree(2,end=8)
         1
-        >>> G.mean_degree()
+        >>> G.degree()
         1.33333
         >>> G.degree(2,delta=True)
-        [(8, 1), (3, 1)]
+        [(3, 1), (8, 1)]
         """
         #no specified node, return mean degree
         if node == None:
             n = 0
             l = 0
-            for node in self.nodes(begin=begin, end=end):
+            for node in self.nodes(begin=begin, end=end, inclusive=inclusive):
                 n += 1
-                l += self.degree(node,begin=begin,end=end)
+                l += self.degree(node,begin=begin,end=end, inclusive=inclusive)
             return l/n
 
         #specified node, no degree_change, return degree
         if delta == False:
-            return len(self.edges(u=node, begin=begin, end=end))
+            return len(self.edges(u=node, begin=begin, end=end, inclusive=inclusive))
 
         #delta == True, return list of changes
         if begin == None:
@@ -904,6 +916,36 @@ class ImpulseGraph(object):
             for edge in self.tree[t]:
                 yield (*edge,t)
 
+    def __in_interval(self,t,begin,end,inclusive=(True,True)):
+        """
+        Parameters
+        ----------
+        t: int or float, timestamp
+        begin: int or float
+            Beginning time of Interval.
+        end: int or float
+            Ending time of Interval.
+            Must be bigger than or equal begin.
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+
+        Returns
+        -------
+        Returns True if t is in the interval (begin,end). Otherwise False.
+        """
+        if begin is None:
+            begin = float('-inf')
+        if end is None:
+            end = float('inf')
+
+        if inclusive == (True,True):
+            return t >= begin and t <= end
+        if inclusive == (True,False):
+            return t >= begin and t < end
+        if inclusive == (False,True):
+            return t > begin and t <= end
+        if inclusive == (False,False):
+            return t > begin and t < end
+
     def to_subgraph(self, begin, end, inclusive=(True,True), multigraph=False, edge_data=False, edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.
@@ -969,7 +1011,7 @@ class ImpulseGraph(object):
             G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[3]))
                              for iedge in iedges)
         elif edge_data:
-            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge.data[0]][iedge].copy())
+            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge])
                              for iedge in iedges)
         elif edge_timestamp_data:
             G.add_edges_from((iedge[0], iedge[1], {'timestamp':iedge[3]})
@@ -1068,6 +1110,45 @@ class ImpulseGraph(object):
             return snapshots, snapshot_len
 
         return snapshots
+
+    @staticmethod
+    def from_networkx_graph(graph, timestamp='timestamp'):
+        """Convert a NetworkX Graph to a ImpulseGraph.
+
+        Parameters
+        ----------
+        graph : NetworkX Graph
+
+        timestamp : string
+        Attribute for timestamp in NetworkX Graph.
+
+        Returns
+        -------
+        G: ImpulseGraph
+            The graph corresponding to the lines in edge list.
+
+        Examples
+        --------
+
+        graph = nx.Graph()
+        graph.add_edge(1,2,timestamp=10,weight=1.5)
+        graph.add_edge(2,3,timestamp=11)
+
+        ig = ImpulseGraph.from_networkx_graph(graph)
+      """
+
+        G = ImpulseGraph()
+
+        for edge in graph.edges(data=True):
+            attr = {}
+
+            for key in edge[2]:
+                if key != timestamp:
+                    attr[key] = edge[2][key]
+
+            G.add_edge(edge[0], edge[1], edge[2][timestamp], **attr)
+
+        return G
 
     @staticmethod
     def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, comments="#"):
@@ -1199,35 +1280,4 @@ class ImpulseGraph(object):
 
                 file.write(line)
 
-    def __inInterval(t,begin,end,inclusive=(True,True)):
-        """
 
-       Parameters
-       ----------
-       t: int or float, timestamp
-       begin: int or float
-            Beginning time of Interval.
-       end: int or float
-            Ending time of Interval.
-            Must be bigger than or equal begin.
-       inclusive: 2-tuple boolean that determines inclusivity of begin and end
-
-       Returns
-       -------
-
-       Returns True if t is in the interval (begin,end). Otherwise False.
-       
-       """
-        if begin is None:
-            begin = float('inf')
-        if end is None:
-            end = float('-inf')
-
-        if inclusive == (True,True):
-            return t >= begin and t <= end
-        if inclusive == (True,False):
-            return t >= begin and t < end
-        if inclusive == (False,True):
-            return t > begin and t <= end
-        if inclusive == (False,False):
-            return t > begin and t < end
