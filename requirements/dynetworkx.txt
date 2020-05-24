@@ -1,1 +1,4 @@
 intervaltree
+networkx
+sortedcontainers
+numpy

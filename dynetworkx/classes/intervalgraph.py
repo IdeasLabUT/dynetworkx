@@ -251,8 +251,8 @@ class IntervalGraph(object):
         NetworkX Graphs, though one should be careful that the hash
         doesn't change on mutables.
         """
-        self._node.setdefault(node_for_adding,attr).update(attr)
-        self._adj.setdefault(node_for_adding,{})
+        self._node.setdefault(node_for_adding, attr).update(attr)
+        self._adj.setdefault(node_for_adding, {})
 
     def add_nodes_from(self, nodes_for_adding, **attr):
         """Add multiple nodes.
@@ -290,10 +290,11 @@ class IntervalGraph(object):
         >>> G.add_nodes_from([(1, dict(size=11)), (2, {'color':'blue'})])
         """
         for n in nodes_for_adding:
-            if isinstance(n,tuple) and isinstance(n[1],dict):
-                self.add_node(n[0],**attr)
+            if isinstance(n, tuple) and isinstance(n[1], dict):
+                self.add_node(n[0], **attr)
                 self._node[n[0]].update(n[1])
-            else: self.add_node(n,**attr)
+            else:
+                self.add_node(n, **attr)
         '''
         for n in nodes_for_adding:
             # keep all this inside try/except because
@@ -315,6 +316,7 @@ class IntervalGraph(object):
                     self._node[nn].update(attr)
                     self._node[nn].update(ndict)
         '''
+
     def number_of_nodes(self, begin=None, end=None):
         """Return the number of nodes in the interval graph between the given interval.
 
@@ -927,7 +929,7 @@ class IntervalGraph(object):
         # removing found iedges
         for iv in iedges_to_remove:
             self.__remove_iedge(iv)
-            
+
     def degree(self, node=None, begin=None, end=None, delta=False):
         """Return the degree of a specified node between time begin and end.
 
@@ -964,46 +966,46 @@ class IntervalGraph(object):
         >>> G.degree(2,delta=True)
         [(3, 1), (5, 0), (8, 1)]
         """
-        
-        #no specified node, return mean degree
+
+        # no specified node, return mean degree
         if node == None:
             n = 0
             l = 0
             for node in self.nodes(begin=begin, end=end):
                 n += 1
-                l += self.degree(node,begin=begin,end=end)
-            return l/n
+                l += self.degree(node, begin=begin, end=end)
+            return l / n
 
-        #specified node, no degree_change, return degree
+        # specified node, no degree_change, return degree
         if delta == False:
             return len(self.edges(u=node, begin=begin, end=end))
 
-        #delta == True, return list of changes
+        # delta == True, return list of changes
         if begin == None:
             begin = self.tree.begin()
         if end == None:
             end = self.tree.end()
-            
+
         current_degree = self.degree(node, begin=begin, end=begin)
         sd = SortedDict()
         output = []
 
-        #for each edge determine if the begin and/or end value is in specified time period
-        for edge in self.edges(u=node,begin=begin,end=end):
+        # for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(u=node, begin=begin, end=end):
             if edge.begin >= begin:
-                #if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin,1),[]).append(edge.data)
+                # if begin is in specified time period, add to SortedDict, with +1 to indicate begin
+                sd.setdefault((edge.begin, 1), []).append(edge.data)
             if edge.end < end:
-                #if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end,-1),[]).append(edge.data)
-                
+                # if begin is in specified time period, add to SortedDict, with -1 to indicate begin
+                sd.setdefault((edge.end, -1), []).append(edge.data)
+
         for time in sd:
             for edge in sd[time]:
-                #iterate through SortedDict, only advancing current degree if edge was not counted on init
+                # iterate through SortedDict, only advancing current degree if edge was not counted on init
                 if time[0] != begin:
                     current_degree += time[1]
-                output.append((time[0],current_degree))
-                
+                output.append((time[0], current_degree))
+
         return output
 
     def __remove_iedge(self, iedge):
@@ -1288,7 +1290,7 @@ class IntervalGraph(object):
             return snapshots, snapshot_len
 
         return snapshots
-    
+
     @staticmethod
     def from_snapshots(snapshotgraph, begin=0, period=1):
         """Convert a SnapshotGraph to a IntervalGraph.
@@ -1298,10 +1300,10 @@ class IntervalGraph(object):
         snapshotgraph : SnapshotGraph
 
         begin : integer or double
-        Timestamp of first snapshot.
+            Timestamp of first snapshot.
 
         period : integer or double
-        Time between each successive snapshot.
+            Time between each successive snapshot.
 
         Returns
         -------
@@ -1321,18 +1323,19 @@ class IntervalGraph(object):
         """
         G = IntervalGraph()
         edge_dict = {}
-        
+
         for snapshot in snapshotgraph.get():
             for edge in snapshot.edges(data=True):
-                if (edge[0],edge[1]) in edge_dict:
-                    edge_dict[(edge[0],edge[1])] = (edge_dict[(edge[0],edge[1])][0], edge_dict[(edge[0],edge[1])][1] + period, edge[2])
+                if (edge[0], edge[1]) in edge_dict:
+                    edge_dict[(edge[0], edge[1])] = (
+                    edge_dict[(edge[0], edge[1])][0], edge_dict[(edge[0], edge[1])][1] + period, edge[2])
                 else:
-                    edge_dict[(edge[0],edge[1])] = (begin, begin + period, edge[2])
-                    
+                    edge_dict[(edge[0], edge[1])] = (begin, begin + period, edge[2])
+
             begin += period
-            
+
         for edge in edge_dict:
-            G.add_edge(edge[0],edge[1],edge_dict[edge][0],edge_dict[edge][1],**edge_dict[edge][2])
+            G.add_edge(edge[0], edge[1], edge_dict[edge][0], edge_dict[edge][1], **edge_dict[edge][2])
 
         return G
 
@@ -1345,10 +1348,10 @@ class IntervalGraph(object):
         graph : NetworkX Graph
 
         begin : string
-        Attribute for beginning timestamp in NetworkX Graph.
+            Attribute for beginning timestamp in NetworkX Graph.
 
         end : string
-        Attribute for ending timestamp in NetworkX Graph.
+            Attribute for ending timestamp in NetworkX Graph.
 
         Returns
         -------
@@ -1364,17 +1367,17 @@ class IntervalGraph(object):
 
         ig = IntervalGraph.from_networkx_graph(graph)
       """
-        
+
         G = IntervalGraph()
 
         for edge in graph.edges(data=True):
             attr = {}
-            
+
             for key in edge[2]:
                 if key != begin and key != end:
                     attr[key] = edge[2][key]
-  
-            G.add_edge(edge[0],edge[1],edge[2][begin],edge[2][end],**attr)
+
+            G.add_edge(edge[0], edge[1], edge[2][begin], edge[2][end], **attr)
 
         return G
 

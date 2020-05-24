@@ -128,7 +128,8 @@ class SnapshotGraph(object):
         if num_in_seq > len(self.snapshots):
             raise ValueError(
                 'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
-                                                                                                    len(self.snapshots)))
+                                                                                                    len(
+                                                                                                        self.snapshots)))
 
         for _ in range(snap_len):
             self.snapshots.insert(num_in_seq, graph)
@@ -209,7 +210,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
 
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -262,7 +263,7 @@ class SnapshotGraph(object):
             max_index = len(self.snapshots)
 
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:(max_index+1)]
+        graph_list = self.snapshots[min_index:(max_index + 1)]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -311,7 +312,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -351,7 +352,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -393,7 +394,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -434,7 +435,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -475,7 +476,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -514,7 +515,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -554,7 +555,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -598,7 +599,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -639,7 +640,7 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
@@ -694,13 +695,13 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
 
         for g in graph_list:
-                g.add_nodes_from(nbunch, **attrs)
+            g.add_nodes_from(nbunch, **attrs)
 
     def add_edges_from(self, ebunch, sbunch=None, **attrs):
         """Adds edges to snapshots in sbunch.
@@ -754,13 +755,13 @@ class SnapshotGraph(object):
             min_index = 0
             max_index = len(self.snapshots)
         # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index+1]
+        graph_list = self.snapshots[min_index:max_index + 1]
         # only get the indexes wanted
         if sbunch:
             graph_list = [graph_list[index - min_index] for index in sbunch]
 
         for g in graph_list:
-                g.add_edges_from(ebunch, **attrs)
+            g.add_edges_from(ebunch, **attrs)
 
     @staticmethod
     def load_from_txt(path, delimiter=";", comments="#"):
@@ -789,8 +790,8 @@ class SnapshotGraph(object):
         """
 
         if delimiter == ' ' or delimiter == '\n':
-            raise ValueError("Delimiter cannot be "+delimiter+".")
-   
+            raise ValueError("Delimiter cannot be " + delimiter + ".")
+
         sg = SnapshotGraph()
 
         with open(path, 'r') as file:
@@ -826,12 +827,12 @@ class SnapshotGraph(object):
         --------
         >>> G.save_to_txt("my_dygraph.txt")
         """
-        
+
         if len(self) == 0:
             raise ValueError("Given graph is empty.")
 
         if delimiter == ' ' or delimiter == '\n':
-            raise ValueError("Delimiter cannot be "+delimiter+".")
+            raise ValueError("Delimiter cannot be " + delimiter + ".")
 
         nodelist = set()
         with open(path, 'w') as file:
@@ -839,12 +840,12 @@ class SnapshotGraph(object):
             for graph in self.get():
                 for node in graph.nodes():
                     nodelist.add(node)
-            
+
             for graph in self.get():
                 for node in nodelist:
                     if node not in graph.nodes():
                         graph.add_node(node)
                 m = adjacency_matrix(graph).todense()
-                line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m,dtype=str)) + '\n'
+                line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m, dtype=str)) + '\n'
 
                 file.write(line)
