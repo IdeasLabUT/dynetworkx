@@ -1,0 +1,4 @@
+1	2	3	4
+5	6	7	8 #this is a comment
+9	10	11	12	weight=1.0
+13	14	15	16	weight=2 #this is a comment too

@@ -251,11 +251,8 @@ class IntervalGraph(object):
         NetworkX Graphs, though one should be careful that the hash
         doesn't change on mutables.
         """
-        if node_for_adding not in self._node:
-            self._adj[node_for_adding] = {}
-            self._node[node_for_adding] = attr
-        else:  # update attr even if node already exists
-            self._node[node_for_adding].update(attr)
+        self._node.setdefault(node_for_adding, attr).update(attr)
+        self._adj.setdefault(node_for_adding, {})
 
     def add_nodes_from(self, nodes_for_adding, **attr):
         """Add multiple nodes.
@@ -293,6 +290,13 @@ class IntervalGraph(object):
         >>> G.add_nodes_from([(1, dict(size=11)), (2, {'color':'blue'})])
         """
         for n in nodes_for_adding:
+            if isinstance(n, tuple) and isinstance(n[1], dict):
+                self.add_node(n[0], **attr)
+                self._node[n[0]].update(n[1])
+            else:
+                self.add_node(n, **attr)
+        '''
+        for n in nodes_for_adding:
             # keep all this inside try/except because
             # CPython throws TypeError on n not in self._node,
             # while pre-2.7.5 ironpython throws on self._adj[n]
@@ -311,6 +315,7 @@ class IntervalGraph(object):
                 else:
                     self._node[nn].update(attr)
                     self._node[nn].update(ndict)
+        '''
 
     def number_of_nodes(self, begin=None, end=None):
         """Return the number of nodes in the interval graph between the given interval.
@@ -379,7 +384,7 @@ class IntervalGraph(object):
         Examples
         --------
         >>> G = dnx.IntervalGraph()
-        >>> G.add_ndoe(1)
+        >>> G.add_node(1)
         >>> G.has_node(1)
         True
 
@@ -398,22 +403,24 @@ class IntervalGraph(object):
         >>> G.has_node(3, end=2) # end is non-inclusive
         False
         """
-        try:
-            node_exists = n in self._node
-        except TypeError:
-            node_exists = False
 
-        if (begin is None and end is None) or not node_exists:
-            return node_exists
+        if n not in self._node:
+            return False
+
+        if begin is None and end is None:
+            return True
+
+        if begin is None and end < self.tree.begin():
+            return False
+
+        if begin is not None and end is not None and end < begin:
+            return False
 
         begin, end = self.__validate_interval(begin, end)
 
-        iedges = self._adj[n].keys()
-
-        for iv in iedges:
-            if iv.overlaps(begin=begin, end=end):
+        for edge in self.__search_tree(begin, end):
+            if n == edge[2][0] or n == edge[2][1]:
                 return True
-
         return False
 
     def nodes(self, begin=None, end=None, data=False, default=None):
@@ -603,12 +610,11 @@ class IntervalGraph(object):
         iedge = Interval(begin, end, (u, v))
 
         # add nodes
-        if u not in self._node:
-            self._adj[u] = {}
-            self._node[u] = {}
-        if v not in self._node:
-            self._adj[v] = {}
-            self._node[v] = {}
+
+        self._adj.setdefault(u, {})
+        self._adj.setdefault(v, {})
+        self._node.setdefault(u, {})
+        self._node.setdefault(v, {})
 
         # add edge
         try:
@@ -923,84 +929,6 @@ class IntervalGraph(object):
         # removing found iedges
         for iv in iedges_to_remove:
             self.__remove_iedge(iv)
-            
-    def degree(self, node=None, begin=None, end=None, delta=False):
-        """Return the degree of a specified node between time begin and end.
-
-        Parameters
-        ----------
-        node : Nodes can be, for example, strings or numbers, optional.
-            Nodes must be hashable (and not None) Python objects.
-        begin : int or float, optional (default= beginning of the entire interval graph)
-            Inclusive beginning time of the edge appearing in the interval graph.
-        end : int or float, optional (default= end of the entire interval graph)
-            Non-inclusive ending time of the edge appearing in the interval graph.
-
-        Returns
-        -------
-        Integer value of degree of specified node.
-        If no node is specified, returns float mean degree value of graph.
-        If delta is True, return list of tuples.
-            First indicating the time a degree change occurred,
-            Second indicating the degree after the change occured
-
-        Examples
-        --------
-        >>> G = IntervalGraph()
-        >>> G.add_edge(1, 2, 3, 5)
-        >>> G.add_edge(2, 3, 8, 11)
-        >>> G.degree(2)
-        2
-        >>> G.degree(2,2)
-        2
-        >>> G.degree(2,end=8)
-        1
-        >>> G.degree()
-        1.33333
-        >>> G.degree(2,delta=True)
-        [(3, 1), (5, 0), (8, 1)]
-        """
-        
-        #no specified node, return mean degree
-        if node == None:
-            n = 0
-            l = 0
-            for node in self.nodes(begin=begin, end=end):
-                n += 1
-                l += self.degree(node,begin=begin,end=end)
-            return l/n
-
-        #specified node, no degree_change, return degree
-        if delta == False:
-            return len(self.edges(u=node, begin=begin, end=end))
-
-        #delta == True, return list of changes
-        if begin == None:
-            begin = self.tree.begin()
-        if end == None:
-            end = self.tree.end()
-            
-        current_degree = self.degree(node, begin=begin, end=begin)
-        sd = SortedDict()
-        output = []
-
-        #for each edge determine if the begin and/or end value is in specified time period
-        for edge in self.edges(u=node,begin=begin,end=end):
-            if edge.begin >= begin:
-                #if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin,1),[]).append(edge.data)
-            if edge.end < end:
-                #if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end,-1),[]).append(edge.data)
-                
-        for time in sd:
-            for edge in sd[time]:
-                #iterate through SortedDict, only advancing current degree if edge was not counted on init
-                if time[0] != begin:
-                    current_degree += time[1]
-                output.append((time[0],current_degree))
-                
-        return output
 
     def degree(self, node=None, begin=None, end=None, delta=False):
         """Return the degree of a specified node between time begin and end.
@@ -1038,46 +966,46 @@ class IntervalGraph(object):
         >>> G.degree(2,delta=True)
         [(3, 1), (5, 0), (8, 1)]
         """
-        
-        #no specified node, return mean degree
+
+        # no specified node, return mean degree
         if node == None:
             n = 0
             l = 0
             for node in self.nodes(begin=begin, end=end):
                 n += 1
-                l += self.degree(node,begin=begin,end=end)
-            return l/n
+                l += self.degree(node, begin=begin, end=end)
+            return l / n
 
-        #specified node, no degree_change, return degree
+        # specified node, no degree_change, return degree
         if delta == False:
             return len(self.edges(u=node, begin=begin, end=end))
 
-        #delta == True, return list of changes
+        # delta == True, return list of changes
         if begin == None:
             begin = self.tree.begin()
         if end == None:
             end = self.tree.end()
-            
+
         current_degree = self.degree(node, begin=begin, end=begin)
         sd = SortedDict()
         output = []
 
-        #for each edge determine if the begin and/or end value is in specified time period
-        for edge in self.edges(u=node,begin=begin,end=end):
+        # for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(u=node, begin=begin, end=end):
             if edge.begin >= begin:
-                #if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin,1),[]).append(edge.data)
+                # if begin is in specified time period, add to SortedDict, with +1 to indicate begin
+                sd.setdefault((edge.begin, 1), []).append(edge.data)
             if edge.end < end:
-                #if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end,-1),[]).append(edge.data)
-                
+                # if begin is in specified time period, add to SortedDict, with -1 to indicate begin
+                sd.setdefault((edge.end, -1), []).append(edge.data)
+
         for time in sd:
             for edge in sd[time]:
-                #iterate through SortedDict, only advancing current degree if edge was not counted on init
+                # iterate through SortedDict, only advancing current degree if edge was not counted on init
                 if time[0] != begin:
                     current_degree += time[1]
-                output.append((time[0],current_degree))
-                
+                output.append((time[0], current_degree))
+
         return output
 
     def __remove_iedge(self, iedge):
@@ -1362,7 +1290,7 @@ class IntervalGraph(object):
             return snapshots, snapshot_len
 
         return snapshots
-    
+
     @staticmethod
     def from_snapshots(snapshotgraph, begin=0, period=1):
         """Convert a SnapshotGraph to a IntervalGraph.
@@ -1372,10 +1300,10 @@ class IntervalGraph(object):
         snapshotgraph : SnapshotGraph
 
         begin : integer or double
-        Timestamp of first snapshot.
+            Timestamp of first snapshot.
 
         period : integer or double
-        Time between each successive snapshot.
+            Time between each successive snapshot.
 
         Returns
         -------
@@ -1395,18 +1323,19 @@ class IntervalGraph(object):
         """
         G = IntervalGraph()
         edge_dict = {}
-        
+
         for snapshot in snapshotgraph.get():
             for edge in snapshot.edges(data=True):
-                if (edge[0],edge[1]) in edge_dict:
-                    edge_dict[(edge[0],edge[1])] = (edge_dict[(edge[0],edge[1])][0], edge_dict[(edge[0],edge[1])][1] + period, edge[2])
+                if (edge[0], edge[1]) in edge_dict:
+                    edge_dict[(edge[0], edge[1])] = (
+                    edge_dict[(edge[0], edge[1])][0], edge_dict[(edge[0], edge[1])][1] + period, edge[2])
                 else:
-                    edge_dict[(edge[0],edge[1])] = (begin, begin + period, edge[2])
-                    
+                    edge_dict[(edge[0], edge[1])] = (begin, begin + period, edge[2])
+
             begin += period
-            
+
         for edge in edge_dict:
-            G.add_edge(edge[0],edge[1],edge_dict[edge][0],edge_dict[edge][1],**edge_dict[edge][2])
+            G.add_edge(edge[0], edge[1], edge_dict[edge][0], edge_dict[edge][1], **edge_dict[edge][2])
 
         return G
 
@@ -1419,10 +1348,10 @@ class IntervalGraph(object):
         graph : NetworkX Graph
 
         begin : string
-        Attribute for beginning timestamp in NetworkX Graph.
+            Attribute for beginning timestamp in NetworkX Graph.
 
         end : string
-        Attribute for ending timestamp in NetworkX Graph.
+            Attribute for ending timestamp in NetworkX Graph.
 
         Returns
         -------
@@ -1438,23 +1367,22 @@ class IntervalGraph(object):
 
         ig = IntervalGraph.from_networkx_graph(graph)
       """
-        
+
         G = IntervalGraph()
 
         for edge in graph.edges(data=True):
             attr = {}
-            
+
             for key in edge[2]:
                 if key != begin and key != end:
                     attr[key] = edge[2][key]
-  
-            G.add_edge(edge[0],edge[1],edge[2][begin],edge[2][end],**attr)
+
+            G.add_edge(edge[0], edge[1], edge[2][begin], edge[2][end], **attr)
 
         return G
-    
-    
+
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=None, intervaltype=float, comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, intervaltype=float, comments="#"):
         """Read interval graph in from path.
            Every line in the file must be an edge in the following format: "node node begin end".
            Both interval times must be integers or floats.
@@ -1465,7 +1393,7 @@ class IntervalGraph(object):
         path : string or file
            Filename to read.
 
-        nodetype : Python type, optional
+        nodetype : Python type, optional (default= int)
            Convert nodes to this type.
 
         intervaltype : Python type, optional (default= float)
@@ -1476,7 +1404,7 @@ class IntervalGraph(object):
            Marker for comment lines
 
         delimiter : string, optional
-           Separator for node labels.  The default is whitespace. Cannot be =.
+           Separator for node labels.  The default is whitespace.
 
         Returns
         -------
@@ -1491,18 +1419,15 @@ class IntervalGraph(object):
 
         For example
 
-        >>> G=dnx.IntervalGraph.load_from_txt("my_dygraph.txt", nodetype=int)
+        >>> G=dnx.IntervalGraph.load_from_txt("my_dygraph.txt", nodetype=float)
 
-        will attempt to convert all nodes to integer type.
+        will attempt to convert all nodes to float type.
 
         Since nodes must be hashable, the function nodetype must return hashable
         types (e.g. int, float, str, frozenset - or tuples of those, etc.)
         """
 
         ig = IntervalGraph()
-
-        if delimiter == '=':
-            raise ValueError("Delimiter cannot be =.")
 
         with open(path, 'r') as file:
             for line in file:
@@ -1521,14 +1446,25 @@ class IntervalGraph(object):
                 edgedata = {}
                 for data in line[4:]:
                     key, value = data.split('=')
+
+                    try:
+                        value = float(value)
+                    except:
+                        pass
                     edgedata[key] = value
 
-                if nodetype is not None:
+                if nodetype is not int:
                     try:
                         u = nodetype(u)
                         v = nodetype(v)
                     except:
                         raise TypeError("Failed to convert node to {0}".format(nodetype))
+                else:
+                    try:
+                        u = int(u)
+                        v = int(v)
+                    except:
+                        pass
 
                 try:
                     begin = intervaltype(begin)
@@ -1540,33 +1476,35 @@ class IntervalGraph(object):
 
         return ig
 
-        def save_to_txt(self, path, delimiter=" "):
-            """Write interval graph to path.
-               Every line in the file will be an edge in the following format: "node node begin end".
+    def save_to_txt(self, path, delimiter=" "):
+        """Write interval graph to path.
+           Every line in the file must be an edge in the following format: "node node begin end".
+           Begin, end must be integers or floats.
+           Nodes can be any hashable objects.
 
-            Parameters
-            ----------
-            path : string or file
-               Filename to write.
+        Parameters
+        ----------
+        path : string or file
+           Filename to read.
 
-            delimiter : string, optional
-               Separator for node labels.  The default is whitespace. Cannot be =.
+        delimiter : string, optional
+           Separator for node labels.  The default is whitespace. Cannot be =.
 
-            Examples
-            --------
-            >>> G.save_to_txt("my_dygraph.txt")
-            """
-            if len(self) == 0:
-                raise ValueError("Given graph is empty.")
+        Examples
+        --------
+        >>> G.save_to_txt("my_dygraph.txt")
+        """
+        if len(self) == 0:
+            raise ValueError("Given graph is empty.")
 
-            if delimiter == '=':
-                raise ValueError("Delimiter cannot be =.")
-        
-            with open(path, 'w') as file:
-                for edge in self.edges(data=True):
-                    line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
-                    for key in edge[1]:
-                        line += delimiter + str(key) + '=' + str(edge[1][key])
-                    line += '\n'
+        if delimiter == '=':
+            raise ValueError("Delimiter cannot be =.")
 
-                    file.write(line)
+        with open(path, 'w') as file:
+            for edge in self.edges(data=True):
+                line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
+                for key in edge[1]:
+                    line += delimiter + str(key) + '=' + str(edge[1][key])
+                line += '\n'
+
+                file.write(line)
