@@ -1,4 +1,4 @@
 intervaltree
-networkx
+networkx>=2.4
 sortedcontainers
 numpy
