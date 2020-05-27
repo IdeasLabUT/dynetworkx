@@ -2,7 +2,7 @@ DyNetworkX
 ==========
 
 DyNetworkX is a Python package for the study of dynamic network analysis (DNA).
-It is a fork of `NetworkX <https://networkx.github.io/documentation/stable/index.html>`_
+DyNetworkX used to be a fork of `NetworkX <https://networkx.github.io/documentation/stable/index.html>`_
 package. Thus, implementation, documentation and the development of DyNetworkX is heavily
 influenced by NetworkX.
 
