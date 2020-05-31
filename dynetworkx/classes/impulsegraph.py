@@ -7,7 +7,7 @@ from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 
 
 class ImpulseGraph(object):
-    """Base class for undirected interval graphs.
+    """Base class for undirected impulse graphs.
 
     The ImpulseGraph class allows any hashable object as a node
     and can associate key/value attribute pairs with each undirected edge.
@@ -911,7 +911,7 @@ class ImpulseGraph(object):
 
         if begin is not None and begin == end and begin in self.tree:
             for edge in self.tree[begin]:
-                yield (*edge, t)
+                yield (*edge, begin)
 
         for t in self.tree.irange(begin, end, inclusive=inclusive):
             for edge in self.tree[t]:
