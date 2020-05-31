@@ -7,7 +7,7 @@ from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 
 
 
-class DiImpulseGraph(ImpulseGraph):
+class ImpulseDiGraph(ImpulseGraph):
     """Base class for undirected interval graphs.
 
     The ImpulseGraph class allows any hashable object as a node
@@ -570,9 +570,3 @@ class DiImpulseGraph(ImpulseGraph):
             return t > begin and t <= end
         if inclusive == (False, False):
             return t > begin and t < end
-
-G =DiImpulseGraph()
-G.add_edge(1,2,3)
-G.add_edge(2,1,4)
-print(G._pred)
-print(G.edges(data=True))

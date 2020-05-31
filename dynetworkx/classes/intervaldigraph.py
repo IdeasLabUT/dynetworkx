@@ -5,7 +5,7 @@ from dynetworkx.classes.intervalgraph import IntervalGraph
 from intervaltree import IntervalTree, Interval
 
 
-class DiIntervalGraph(IntervalGraph):
+class IntervalDiGraph(IntervalGraph):
 
     def __init__(self, **attr):
         """Initialize an interval graph with edges, name, or graph attributes.
@@ -320,7 +320,7 @@ class DiIntervalGraph(IntervalGraph):
 
             # Interval filtering
             begin, end = self.__validate_interval(begin, end)
-            iedges = [iv for iv in iedges if DiIntervalGraph.__overlaps_or_contains(iv, begin, end)]
+            iedges = [iv for iv in iedges if IntervalDiGraph.__overlaps_or_contains(iv, begin, end)]
 
         # Appending attribute data if needed
         if data is False:
@@ -407,7 +407,7 @@ class DiIntervalGraph(IntervalGraph):
         begin, end = self.__validate_interval(begin, end)
 
         for iv in self._pred[u].keys():
-            if iv.data[1] == v and DiIntervalGraph.__overlaps_or_contains(iv, begin, end):
+            if iv.data[1] == v and IntervalDiGraph.__overlaps_or_contains(iv, begin, end):
                 iedges_to_remove.append(iv)
 
         # removing found iedges
