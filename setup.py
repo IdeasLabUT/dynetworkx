@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='DyNetworkX',
-    version='0.1',
+    version='0.2',
     author='Makan Arastuie',
     author_email='Makan.Arastuie@rockets.utoledo.edu',
     packages=['dynetworkx',
