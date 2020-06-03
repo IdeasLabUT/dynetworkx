@@ -59,7 +59,6 @@ Documentation
 
    install
    tutorial
-   download
    reference/index
    developer
    license

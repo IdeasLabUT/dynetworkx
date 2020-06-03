@@ -95,3 +95,33 @@ def test_impulsedigraph_remove_edge_slice():
     G.remove_edge(1, 2, begin=2, end=11)
     assert G.has_edge(1, 2, begin=2, end=11) == False
     assert G.has_edge(1, 2)
+
+def test_impulsedigraph_degree():
+    G = dnx.ImpulseDiGraph()
+    G.add_edge(1, 2, 3)
+    G.add_edge(2, 3, 8)
+    assert G.degree(2) == 2
+    assert G.degree(2, 4) == 1
+    assert G.degree(2, end=8) == 2
+    assert G.degree() == 4/3
+    assert G.degree(2, delta=True) == [(3, 1), (8, 1)]
+
+def test_impulsedigraph_in_degree():
+    G = dnx.ImpulseDiGraph()
+    G.add_edge(1, 2, 3)
+    G.add_edge(2, 3, 8)
+    assert G.in_degree(2) == 1
+    assert G.in_degree(2, 4) == 0
+    assert G.in_degree(2, end=8) == 1
+    assert G.in_degree() == 2/3
+    assert G.in_degree(2, delta=True) == [(3, 1)]
+
+def test_impulsedigraph_out_degree():
+    G = dnx.ImpulseDiGraph()
+    G.add_edge(1, 2, 3)
+    G.add_edge(2, 3, 8)
+    assert G.out_degree(2) == 1
+    assert G.out_degree(2, 4) == 1
+    assert G.out_degree(2, end=8) == 1
+    assert G.out_degree() == 2/3
+    assert G.out_degree(2, delta=True) == [(8, 1)]

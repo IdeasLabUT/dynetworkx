@@ -87,3 +87,33 @@ def test_intervaldigraph_remove_edge_slice():
     G.remove_edge(1, 2, begin=2, end=11)
     assert G.has_edge(1, 2, begin=2, end=11) == False
     assert G.has_edge(1, 2)
+
+def test_intervaldigraph_degree():
+    G = dnx.IntervalDiGraph()
+    G.add_edge(1, 2, 3, 5)
+    G.add_edge(2, 3, 8, 11)
+    assert G.degree(2) == 2
+    assert G.degree(2, 2) == 2
+    assert G.degree(2, end=8) == 1
+    assert G.degree() == 4/3
+    assert G.degree(2, delta=True) == [(3, 1), (5, 0), (8, 1)]
+
+def test_intervaldigraph_in_degree():
+    G = dnx.IntervalDiGraph()
+    G.add_edge(1, 2, 3, 5)
+    G.add_edge(2, 3, 8, 11)
+    assert G.in_degree(2) == 1
+    assert G.in_degree(2, 2) == 1
+    assert G.in_degree(2, end=8) == 1
+    assert G.in_degree() == 2/3
+    assert G.in_degree(2, delta=True) == [(3, 1), (5, 0)]
+
+def test_intervaldigraph_out_degree():
+    G = dnx.IntervalDiGraph()
+    G.add_edge(1, 2, 3, 5)
+    G.add_edge(2, 3, 8, 11)
+    assert G.out_degree(2) == 1
+    assert G.out_degree(2, 2) == 1
+    assert G.out_degree(2, end=8) == 0
+    assert G.out_degree() == 2/3
+    assert G.out_degree(2, delta=True) == [(8, 1)]

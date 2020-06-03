@@ -7,5 +7,8 @@ Graph Types
    :maxdepth: 2
 
    intervalgraph
+   intervaldigraph
    impulsegraph
+   impulsedigraph
    snapshotgraph
+   snapshotdigraph

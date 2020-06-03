@@ -1,17 +1,16 @@
 from dynetworkx.classes.impulsegraph import ImpulseGraph
 from networkx.classes.graph import Graph
 from networkx.exception import NetworkXError
-from sortedcontainers import SortedDict
+from sortedcontainers import SortedDict, SortedList
 from networkx.classes.multigraph import MultiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 
 
-
 class ImpulseDiGraph(ImpulseGraph):
-    """Base class for undirected interval graphs.
+    """Base class for directed impulse graphs.
 
-    The ImpulseGraph class allows any hashable object as a node
-    and can associate key/value attribute pairs with each undirected edge.
+    The ImpulseDiGraph class allows any hashable object as a node
+    and can associate key/value attribute pairs with each directed edge.
 
     Each edge must have one integer, timestamp.
 
@@ -25,10 +24,10 @@ class ImpulseDiGraph(ImpulseGraph):
 
     Examples
     --------
-    Create an empty graph structure (a "null interval graph") with no nodes and
+    Create an empty graph structure (a "null impulse graph") with no nodes and
     no edges.
 
-    >>> G = dnx.ImpulseGraph()
+    >>> G = dnx.ImpulseDiGraph()
 
     G can be grown in several ways.
 
@@ -73,7 +72,7 @@ class ImpulseDiGraph(ImpulseGraph):
 
     Keep in mind that the edge timestamp is not an attribute of the edge.
 
-    >>> G = dnx.IntervalGraph(day="Friday")
+    >>> G = dnx.ImpulseDiGraph(day="Friday")
     >>> G.graph
     {'day': 'Friday'}
 
@@ -108,7 +107,7 @@ class ImpulseDiGraph(ImpulseGraph):
     """
 
     def __init__(self, **attr):
-        """Initialize an interval graph with edges, name, or graph attributes.
+        """Initialize an impulse graph with edges, name, or graph attributes.
 
         Parameters
         ----------
@@ -117,8 +116,8 @@ class ImpulseDiGraph(ImpulseGraph):
 
         Examples
         --------
-        >>> G = dnx.ImpulseGraph()
-        >>> G = dnx.ImpulseGraph(name='my graph')
+        >>> G = dnx.ImpulseDiGraph()
+        >>> G = dnx.ImpulseDiGraph(name='my graph')
         >>> G.graph
         {'name': 'my graph'}
         """
@@ -171,7 +170,7 @@ class ImpulseDiGraph(ImpulseGraph):
         --------
         The following all add the edge e=(1, 2, 3, 10) to graph G:
 
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> e = (1, 2, 10)
         >>> G.add_edge(1, 2, 10)           # explicit two-node form with timestamp
         >>> G.add_edge(*e)             # single edge as tuple of two nodes and timestamp
@@ -200,7 +199,7 @@ class ImpulseDiGraph(ImpulseGraph):
         ----------
         ebunch_to_add : container of edges
             Each edge given in the container will be added to the
-            interval graph. The edges must be given as as 3-tuples (u, v, t).
+            impulse graph. The edges must be given as as 3-tuples (u, v, t).
             Timestamp must be orderable and the same type across all edges.
         attr : keyword arguments, optional
             Edge data (or labels or objects) can be assigned using
@@ -217,7 +216,7 @@ class ImpulseDiGraph(ImpulseGraph):
 
         Examples
         --------
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11)]) # using a list of edge tuples
 
         Associate data to edges
@@ -247,7 +246,7 @@ class ImpulseDiGraph(ImpulseGraph):
 
         Examples
         --------
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11)])
         >>> G.has_edge(1, 2)
         True
@@ -271,7 +270,7 @@ class ImpulseDiGraph(ImpulseGraph):
         return False
 
     def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True, True), data=False, default=None):
-        """Returns a list of Interval objects of the IntervalGraph edges.
+        """Returns a list of tuples of the ImpulseDiGraph edges.
 
         All edges which are present within the given interval.
 
@@ -312,7 +311,7 @@ class ImpulseDiGraph(ImpulseGraph):
         --------
         To get a list of all edges:
 
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
         >>> G.edges()
         [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
@@ -339,7 +338,7 @@ class ImpulseDiGraph(ImpulseGraph):
 
         To get a list of edges with data:
 
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edge(1, 3, 4, weight=8, height=18)
         >>> G.add_edge(1, 2, 10, weight=10)
         >>> G.add_edge(2, 6, 10)
@@ -384,20 +383,20 @@ class ImpulseDiGraph(ImpulseGraph):
         u, v : nodes
             Nodes can be, for example, strings or numbers.
             Nodes must be hashable (and not None) Python objects.
-        begin : int or float, optional (default= beginning of the entire interval graph)
-        end : int or float, optional (default= end of the entire interval graph + 1)
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+        end : int or float, optional (default= end of the entire impulse graph + 1)
             Must be bigger than or equal to begin.
         inclusive: 2-tuple boolean that determines inclusivity of begin and end
 
         Examples
         --------
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 9), (1, 2, 15)])
         >>> G.remove_edge(1, 2)
         >>> G.has_edge(1, 2)
         False
 
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 9), (1, 2, 15)])
         >>> G.remove_edge(1, 2, begin=2, end=11)
         >>> G.has_edge(1, 2, begin=2, end=11)
@@ -415,7 +414,7 @@ class ImpulseDiGraph(ImpulseGraph):
             self.__remove_iedge(edge)
 
     def degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, True)):
-        """Return the degree of a specified node between time begin and end.
+        """Return the sum of in and out degree of a specified node between time begin and end.
 
         Parameters
         ----------
@@ -435,18 +434,18 @@ class ImpulseDiGraph(ImpulseGraph):
 
         Examples
         --------
-        >>> G = dnx.ImpulseGraph()
+        >>> G = dnx.ImpulseDiGraph()
         >>> G.add_edge(1, 2, 3)
         >>> G.add_edge(2, 3, 8)
         >>> G.degree(2)
         2
-        >>> G.degree(2,2)
-        2
-        >>> G.degree(2,end=8)
+        >>> G.degree(2, 4)
         1
+        >>> G.degree(2, end=8)
+        2
         >>> G.degree()
         1.33333
-        >>> G.degree(2,delta=True)
+        >>> G.degree(2, delta=True)
         [(3, 1), (8, 1)]
         """
         # no specified node, return mean degree
@@ -456,6 +455,143 @@ class ImpulseDiGraph(ImpulseGraph):
             for node in self.nodes(begin=begin, end=end, inclusive=inclusive):
                 n += 1
                 l += self.degree(node, begin=begin, end=end, inclusive=inclusive)
+            return l / n
+
+        # specified node, no degree_change, return degree
+        if delta == False:
+            return len(self.edges(u=node, begin=begin, end=end, inclusive=inclusive)) + \
+                   len(self.edges(v=node, begin=begin, end=end, inclusive=inclusive))
+
+        # delta == True, return list of changes
+        if begin == None:
+            begin = list(self.tree.keys())[0]
+        if end == None:
+            end = list(self.tree.keys())[-1]
+
+        d = {}
+        output = []
+
+        # for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(u=node, begin=begin, end=end, inclusive=(True, True)):
+            d.setdefault(edge[2], []).append((edge[0], edge[1]))
+        for edge in self.edges(v=node, begin=begin, end=end, inclusive=(True, True)):
+            d.setdefault(edge[2], []).append((edge[0], edge[1]))
+
+        # for each time in Dict add to output list the len of each value
+        for time in d:
+            output.append((time, len(d[time])))
+
+        return sorted(output)
+
+    def in_degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, True)):
+        """Return the in-degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+            Inclusive beginning time of the edge appearing in the impulse graph.
+        end : int or float, optional (default= end of the entire impulse graph)
+            Non-inclusive ending time of the edge appearing in the impulse graph.
+        delta : boolean, optional (default= False)
+            Returns list of 2-tuples, first element is the timestamp, second is the node of changing degree.
+        inclusive : 2-tuple boolean that determines inclusivity of begin and end
+
+        Returns
+        -------
+        Integer value of in-degree of specified node.
+
+        Examples
+        --------
+        >>> G = dnx.ImpulseDiGraph()
+        >>> G.add_edge(1, 2, 3)
+        >>> G.add_edge(2, 3, 8)
+        >>> G.in_degree(2)
+        1
+        >>> G.in_degree(2, 4)
+        0
+        >>> G.in_degree(2, end=8)
+        1
+        >>> G.in_degree()
+        0.66666
+        >>> G.in_degree(2, delta=True)
+        [(3, 1)]
+        """
+        # no specified node, return mean degree
+        if node == None:
+            n = 0
+            l = 0
+            for node in self.nodes(begin=begin, end=end, inclusive=inclusive):
+                n += 1
+                l += self.in_degree(node, begin=begin, end=end, inclusive=inclusive)
+            return l / n
+
+        # specified node, no degree_change, return degree
+        if delta == False:
+            return len(self.edges(v=node, begin=begin, end=end, inclusive=inclusive))
+
+        # delta == True, return list of changes
+        if begin == None:
+            begin = list(self.tree.keys())[0]
+        if end == None:
+            end = list(self.tree.keys())[-1]
+
+        d = {}
+        output = []
+
+        # for each edge determine if the begin and/or end value is in specified time period
+        for edge in self.edges(v=node, begin=begin, end=end, inclusive=(True, True)):
+            d.setdefault(edge[2], []).append((edge[0], edge[1]))
+
+        # for each time in Dict add to output list the len of each value
+        for time in d:
+            output.append((time, len(d[time])))
+
+        return output
+
+    def out_degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, True)):
+        """Return the out-degree of a specified node between time begin and end.
+
+        Parameters
+        ----------
+        node : Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+        begin : int or float, optional (default= beginning of the entire impulse graph)
+            Inclusive beginning time of the edge appearing in the impulse graph.
+        end : int or float, optional (default= end of the entire impulse graph)
+            Non-inclusive ending time of the edge appearing in the impulse graph.
+        delta : boolean, optional (default= False)
+            Returns list of 2-tuples, first element is the timestamp, second is the node of changing degree.
+        inclusive : 2-tuple boolean that determines inclusivity of begin and end
+
+        Returns
+        -------
+        Integer value of out-degree of specified node.
+
+        Examples
+        --------
+        >>> G = dnx.ImpulseDiGraph()
+        >>> G.add_edge(1, 2, 3)
+        >>> G.add_edge(2, 3, 8)
+        >>> G.out_degree(2)
+        1
+        >>> G.out_degree(2, 2)
+        1
+        >>> G.out_degree(2, end=8)
+        1
+        >>> G.out_degree()
+        0.66666
+        >>> G.out_degree(2, delta=True)
+        [(8, 1)]
+        """
+        # no specified node, return mean degree
+        if node == None:
+            n = 0
+            l = 0
+            for node in self.nodes(begin=begin, end=end, inclusive=inclusive):
+                n += 1
+                l += self.in_degree(node, begin=begin, end=end, inclusive=inclusive)
             return l / n
 
         # specified node, no degree_change, return degree
@@ -482,7 +618,7 @@ class ImpulseDiGraph(ImpulseGraph):
         return output
 
     def __remove_iedge(self, iedge):
-        """Remove the interval edge from the impulse graph.
+        """Remove the impulse edge from the impulse graph.
 
         Quiet if the specified edge is not present.
 
@@ -515,7 +651,7 @@ class ImpulseDiGraph(ImpulseGraph):
         """
 
         if (begin is not None and end is not None) and begin > end:
-            raise NetworkXError("ImpulseGraph: interval end must be bigger than or equal to begin: "
+            raise NetworkXError("ImpulseDiGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
         return begin, end
@@ -563,10 +699,10 @@ class ImpulseDiGraph(ImpulseGraph):
             end = float('inf')
 
         if inclusive == (True, True):
-            return t >= begin and t <= end
+            return begin <= t <= end
         if inclusive == (True, False):
-            return t >= begin and t < end
+            return begin <= t < end
         if inclusive == (False, True):
-            return t > begin and t <= end
+            return begin < t <= end
         if inclusive == (False, False):
-            return t > begin and t < end
+            return begin < t < end

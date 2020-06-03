@@ -24,7 +24,7 @@ class ImpulseGraph(object):
 
     Examples
     --------
-    Create an empty graph structure (a "null interval graph") with no nodes and
+    Create an empty graph structure (a "null impulse graph") with no nodes and
     no edges.
 
     >>> G = dnx.ImpulseGraph()
@@ -72,7 +72,7 @@ class ImpulseGraph(object):
 
     Keep in mind that the edge timestamp is not an attribute of the edge.
 
-    >>> G = dnx.IntervalGraph(day="Friday")
+    >>> G = dnx.ImpulseGraph(day="Friday")
     >>> G.graph
     {'day': 'Friday'}
 
@@ -107,7 +107,7 @@ class ImpulseGraph(object):
     """
 
     def __init__(self, **attr):
-        """Initialize an interval graph with edges, name, or graph attributes.
+        """Initialize an impulse graph with edges, name, or graph attributes.
 
         Parameters
         ----------
@@ -132,9 +132,9 @@ class ImpulseGraph(object):
 
     @property
     def name(self):
-        """String identifier of the interval graph.
+        """String identifier of the impulse graph.
 
-        This interval graph attribute appears in the attribute dict IG.graph
+        This impulse graph attribute appears in the attribute dict IG.graph
         keyed by the string `"name"`. as well as an attribute (technically
         a property) `IG.name`. This is entirely user controlled.
         """
@@ -145,16 +145,16 @@ class ImpulseGraph(object):
         self.graph['name'] = s
 
     def __str__(self):
-        """Return the interval graph name.
+        """Return the impulse graph name.
 
         Returns
         -------
         name : string
-            The name of the interval graph.
+            The name of the impulse graph.
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph(name='foo')
+        >>> G = dnx.ImpulseGraph(name='foo')
         >>> str(G)
         'foo'
         """
@@ -171,7 +171,7 @@ class ImpulseGraph(object):
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_nodes_from([2, 4, 5])
         >>> len(G)
         3
@@ -185,7 +185,7 @@ class ImpulseGraph(object):
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_node(2)
         >>> 2 in G
         True
@@ -576,7 +576,7 @@ class ImpulseGraph(object):
         ----------
         ebunch_to_add : container of edges
             Each edge given in the container will be added to the
-            interval graph. The edges must be given as as 3-tuples (u, v, t).
+            impulse graph. The edges must be given as as 3-tuples (u, v, t).
             Timestamp must be orderable and the same type across all edges.
         attr : keyword arguments, optional
             Edge data (or labels or objects) can be assigned using
@@ -647,7 +647,7 @@ class ImpulseGraph(object):
         return False
 
     def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True, True), data=False, default=None):
-        """Returns a list of Interval objects of the IntervalGraph edges.
+        """Returns a list of Interval objects of the ImpulseGraph edges.
 
         All edges which are present within the given interval.
 
@@ -688,7 +688,7 @@ class ImpulseGraph(object):
         --------
         To get a list of all edges:
 
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.ImpulseGraph()
         >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
         >>> G.edges()
         [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
@@ -1092,7 +1092,7 @@ class ImpulseGraph(object):
         """
 
         if number_of_snapshots < 2 or type(number_of_snapshots) is not int:
-            raise NetworkXError("IntervalGraph: number of snapshots must be an integer and 2 or bigger. "
+            raise NetworkXError("ImpulseGraph: number of snapshots must be an integer and 2 or bigger. "
                                 "{0} was passed.".format(number_of_snapshots))
 
         begin, end = self.interval()
