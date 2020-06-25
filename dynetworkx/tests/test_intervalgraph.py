@@ -333,10 +333,30 @@ def test_intervalgraph_from_snapshots_period():
 def test_intervalgraph_to_snapshots_default():
     G = dnx.IntervalGraph()
     G.add_edges_from([(1, 2, 3, 6), (2, 4, 5, 11), (6, 4, 19, 20), (2, 4, 15, 16)])
-    S = G.to_snapshots(2)
+    S = G.to_snapshots(2, return_length=True)
 
-    assert sorted(list(S[0].edges())) == [(1, 2), (2, 4)]
-    assert sorted(list(S[1].edges())) == [(4, 2), (6, 4)]
+    assert len(S[0]) == 2
+    assert S[1] == 8.5
+    assert sorted(list(S[0][0].edges())) == [(1, 2), (2, 4)]
+    assert sorted(list(S[0][1].edges())) == [(4, 2), (6, 4)]
+
+
+def test_interval_graph_to_snapshots_len():
+    G = dnx.IntervalGraph()
+    G.add_edges_from([(1, 2, 3, 6), (2, 4, 5, 11), (6, 4, 19, 20), (2, 4, 15, 16)])
+    S = G.to_snapshots(length_of_snapshots=2, return_length=True)
+
+    assert len(S[0]) == 9
+    assert S[1] == 2
+    assert sorted(list(S[0][0].edges())) == [(1, 2)]
+    assert sorted(list(S[0][1].edges())) == [(1, 2), (2, 4)]
+    assert sorted(list(S[0][2].edges())) == [(2, 4)]
+    assert sorted(list(S[0][3].edges())) == [(2, 4)]
+    assert sorted(list(S[0][4].edges())) == []
+    assert sorted(list(S[0][5].edges())) == []
+    assert sorted(list(S[0][6].edges())) == [(2, 4)]
+    assert sorted(list(S[0][7].edges())) == []
+    assert sorted(list(S[0][8].edges())) == [(6, 4)]
 
 
 def test_intervalgraph_to_subgraph_default():

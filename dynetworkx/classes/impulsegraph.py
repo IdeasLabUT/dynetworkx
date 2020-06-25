@@ -1101,36 +1101,34 @@ class ImpulseGraph(object):
             raise NetworkXError("IntervalGraph: either number of snapshots or length of snapshots must be given, "
                                 "not both.")
 
+        begin, end = self.interval()
         if type(length_of_snapshots) is int or type(length_of_snapshots) is float:
             if length_of_snapshots < 0:
                 raise NetworkXError("IntervalGraph: length of snapshots must be bigger than 0. "
                                     "{0} was passed.".format(number_of_snapshots))
-
-            tree_range = self.tree.keys()[-1] - self.tree.keys()[0]
-            number_of_snapshots = tree_range // length_of_snapshots
-            if tree_range % length_of_snapshots != 0:
+            number_of_snapshots = (end - begin) // length_of_snapshots
+            if (end - begin) % length_of_snapshots != 0:
                 number_of_snapshots += 1
 
         if number_of_snapshots < 2 or type(number_of_snapshots) is not int:
             raise NetworkXError("IntervalGraph: number of snapshots must be an integer and 2 or bigger. "
                                 "{0} was passed.".format(number_of_snapshots))
 
-        begin, end = self.interval()
-        snapshot_len = (end - begin) / number_of_snapshots
+        if length_of_snapshots is False:
+            length_of_snapshots = (end - begin) / number_of_snapshots
 
         snapshots = []
-        end_inclusive_addition = 0
+        inclusive = (True, False)
         for i in range(number_of_snapshots):
-            # since to_subgraph is end non-inclusive, shift the end up by 1 to include end in the last snapshot.
             if i == number_of_snapshots - 1:
-                end_inclusive_addition = 1
-
+                inclusive = (True, True)
             snapshots.append(
-                self.to_subgraph(begin + snapshot_len * i, begin + snapshot_len * (i + 1) + end_inclusive_addition,
+                self.to_subgraph(begin + length_of_snapshots * i,
+                                 begin + length_of_snapshots * (i + 1), inclusive=inclusive,
                                  multigraph=multigraph, edge_data=edge_data, edge_timestamp_data=edge_timestamp_data,
                                  node_data=node_data))
         if return_length:
-            return snapshots, snapshot_len
+            return snapshots, length_of_snapshots
 
         return snapshots
 

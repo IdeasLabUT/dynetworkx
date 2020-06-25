@@ -7,7 +7,6 @@ from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 from sortedcontainers import SortedList, SortedDict
 
 
-
 class IntervalGraph(object):
     """Base class for undirected interval graphs.
 
@@ -1280,22 +1279,21 @@ class IntervalGraph(object):
             raise NetworkXError("IntervalGraph: either number of snapshots or length of snapshots must be given, "
                                 "not both.")
 
+        begin, end = self.interval()
         if type(length_of_snapshots) is int or type(length_of_snapshots) is float:
             if length_of_snapshots < 0:
                 raise NetworkXError("IntervalGraph: length of snapshots must be bigger than 0. "
                                     "{0} was passed.".format(number_of_snapshots))
-
-            tree_range = self.tree.end() - self.tree.begin()
-            number_of_snapshots = tree_range // length_of_snapshots
-            if tree_range % length_of_snapshots != 0:
+            number_of_snapshots = (end - begin) // length_of_snapshots
+            if (end - begin) % length_of_snapshots != 0:
                 number_of_snapshots += 1
 
         if number_of_snapshots < 2 or type(number_of_snapshots) is not int:
             raise NetworkXError("IntervalGraph: number of snapshots must be an integer and 2 or bigger. "
                                 "{0} was passed.".format(number_of_snapshots))
 
-        begin, end = self.interval()
-        snapshot_len = (end - begin) / number_of_snapshots
+        if length_of_snapshots is False:
+            length_of_snapshots = (end - begin) / number_of_snapshots
 
         snapshots = []
         end_inclusive_addition = 0
@@ -1305,11 +1303,12 @@ class IntervalGraph(object):
                 end_inclusive_addition = 1
 
             snapshots.append(
-                self.to_subgraph(begin + snapshot_len * i, begin + snapshot_len * (i + 1) + end_inclusive_addition,
+                self.to_subgraph(begin + length_of_snapshots * i,
+                                 begin + length_of_snapshots * (i + 1) + end_inclusive_addition,
                                  multigraph=multigraph, edge_data=edge_data, edge_interval_data=edge_interval_data,
                                  node_data=node_data))
         if return_length:
-            return snapshots, snapshot_len
+            return snapshots, length_of_snapshots
 
         return snapshots
 
