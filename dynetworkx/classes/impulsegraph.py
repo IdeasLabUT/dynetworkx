@@ -1027,7 +1027,7 @@ class ImpulseGraph(object):
 
         return G
 
-    def to_snapshots(self, number_of_snapshots, multigraph=False, edge_data=False, edge_timestamp_data=False,
+    def to_snapshots(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False, edge_timestamp_data=False,
                      node_data=False, return_length=False):
         """Return a list of networkx Graph or MultiGraph objects as snapshots
         of the impulse graph in consecutive order.
@@ -1036,6 +1036,9 @@ class ImpulseGraph(object):
         ----------
         number_of_snapshots : integer
             Number of snapshots to divide the interval graph into.
+            Must be bigger than 2.
+        length_of_snapshots : integer or float
+            Length of snapshots to divide the interval graph into.
             Must be bigger than 1.
         multigraph : bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
@@ -1091,8 +1094,25 @@ class ImpulseGraph(object):
         [(6, 4, {'timestamp': 19})]
         """
 
+        if type(number_of_snapshots) is bool and type(length_of_snapshots) is bool:
+            raise NetworkXError("IntervalGraph: either number of snapshots or length of snapshots must be given.")
+
+        if type(number_of_snapshots) is not bool and type(length_of_snapshots) is not bool:
+            raise NetworkXError("IntervalGraph: either number of snapshots or length of snapshots must be given, "
+                                "not both.")
+
+        if type(length_of_snapshots) is int or type(length_of_snapshots) is float:
+            if length_of_snapshots < 0:
+                raise NetworkXError("IntervalGraph: length of snapshots must be bigger than 0. "
+                                    "{0} was passed.".format(number_of_snapshots))
+
+            tree_range = self.tree.keys()[-1] - self.tree.keys()[0]
+            number_of_snapshots = tree_range // length_of_snapshots
+            if tree_range % length_of_snapshots != 0:
+                number_of_snapshots += 1
+
         if number_of_snapshots < 2 or type(number_of_snapshots) is not int:
-            raise NetworkXError("ImpulseGraph: number of snapshots must be an integer and 2 or bigger. "
+            raise NetworkXError("IntervalGraph: number of snapshots must be an integer and 2 or bigger. "
                                 "{0} was passed.".format(number_of_snapshots))
 
         begin, end = self.interval()

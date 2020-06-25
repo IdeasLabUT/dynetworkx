@@ -849,3 +849,27 @@ class SnapshotGraph(object):
                 line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m, dtype=str)) + '\n'
 
                 file.write(line)
+
+    def compute_network_statistic(self, nx_statistic_function, begin=None, end=None):
+        """Compute networkx statistics on each snapshot.
+
+        Parameters
+        ----------
+        nx_statistic_function : function from networkx.algorithms
+           Statistic function to calculate.
+
+        begin : int, optional (default= None)
+           Number of snapshot to begin calculation
+
+        end : int, optional (default= None)
+           Number of snapshot to end calculation
+
+        Examples
+        --------
+        >>> G.compute_network_statistic(nx.algorithms.centrality.degree_centrality)
+        """
+
+        output = []
+        for graph in self.snapshots[begin:end]:
+            output.append(nx_statistic_function(graph))
+        return output

@@ -7,6 +7,7 @@ from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 from sortedcontainers import SortedList, SortedDict
 
 
+
 class IntervalGraph(object):
     """Base class for undirected interval graphs.
 
@@ -1204,7 +1205,8 @@ class IntervalGraph(object):
 
         return G
 
-    def to_snapshots(self, number_of_snapshots, multigraph=False, edge_data=False, edge_interval_data=False,
+    def to_snapshots(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False,
+                     edge_interval_data=False,
                      node_data=False, return_length=False):
         """Return a list of networkx Graph or MultiGraph objects as snapshots
         of the interval graph in consecutive order.
@@ -1213,6 +1215,9 @@ class IntervalGraph(object):
         ----------
         number_of_snapshots : integer
             Number of snapshots to divide the interval graph into.
+            Must be bigger than 2.
+        length_of_snapshots : integer or float
+            Length of snapshots to divide the interval graph into.
             Must be bigger than 1.
         multigraph : bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
@@ -1267,6 +1272,23 @@ class IntervalGraph(object):
         [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 11, 'begin': 1}), (2, 4, {'end': 15, 'begin': 8}), (4, 6, {'end': 19, 'begin': 12})]
         [(2, 4, {'end': 15, 'begin': 8}), (4, 6, {'end': 19, 'begin': 12})]
         """
+
+        if type(number_of_snapshots) is bool and type(length_of_snapshots) is bool:
+            raise NetworkXError("IntervalGraph: either number of snapshots or length of snapshots must be given.")
+
+        if type(number_of_snapshots) is not bool and type(length_of_snapshots) is not bool:
+            raise NetworkXError("IntervalGraph: either number of snapshots or length of snapshots must be given, "
+                                "not both.")
+
+        if type(length_of_snapshots) is int or type(length_of_snapshots) is float:
+            if length_of_snapshots < 0:
+                raise NetworkXError("IntervalGraph: length of snapshots must be bigger than 0. "
+                                    "{0} was passed.".format(number_of_snapshots))
+
+            tree_range = self.tree.end() - self.tree.begin()
+            number_of_snapshots = tree_range // length_of_snapshots
+            if tree_range % length_of_snapshots != 0:
+                number_of_snapshots += 1
 
         if number_of_snapshots < 2 or type(number_of_snapshots) is not int:
             raise NetworkXError("IntervalGraph: number of snapshots must be an integer and 2 or bigger. "
@@ -1328,7 +1350,7 @@ class IntervalGraph(object):
             for edge in snapshot.edges(data=True):
                 if (edge[0], edge[1]) in edge_dict:
                     edge_dict[(edge[0], edge[1])] = (
-                    edge_dict[(edge[0], edge[1])][0], edge_dict[(edge[0], edge[1])][1] + period, edge[2])
+                        edge_dict[(edge[0], edge[1])][0], edge_dict[(edge[0], edge[1])][1] + period, edge[2])
                 else:
                     edge_dict[(edge[0], edge[1])] = (begin, begin + period, edge[2])
 
