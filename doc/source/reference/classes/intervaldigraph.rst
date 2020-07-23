@@ -57,6 +57,7 @@ Making copies and subgraphs
 
    IntervalDiGraph.to_subgraph
    IntervalDiGraph.to_snapshots
+   IntervalDiGraph.to_snapshot_graph
 
 
 Loading an interval graph
@@ -67,7 +68,7 @@ Loading an interval graph
    IntervalDiGraph.load_from_txt
    IntervalDiGraph.save_to_txt
    IntervalDiGraph.from_networkx_graph
-   IntervalDiGraph.from_snapshots
+   IntervalDiGraph.from_snapshot_graph
 
 Analyzing interval graphs
 -------------------------

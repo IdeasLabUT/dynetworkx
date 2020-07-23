@@ -57,6 +57,7 @@ Making copies and subgraphs
 
    ImpulseDiGraph.to_subgraph
    ImpulseDiGraph.to_snapshots
+   ImpulseDiGraph.to_snapshot_graph
 
 
 Loading an impulse graph

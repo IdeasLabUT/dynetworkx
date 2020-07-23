@@ -57,3 +57,5 @@ networkx.egg-info/
 # Project testing file for Makan
 dynetworkx/classes/test.py
 DyNetworkX.egg-info/
+tutorials/facebook-wall.txt.anon
+tutorials/execs.email.linesnum

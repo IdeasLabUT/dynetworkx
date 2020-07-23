@@ -1056,6 +1056,7 @@ class ImpulseGraph(object):
         See Also
         --------
         to_subgraph : subgraph based on an interval
+        to_snapshotgraph : snapshotgraph based on impulse graph
 
         Notes
         -----
@@ -1132,6 +1133,90 @@ class ImpulseGraph(object):
 
         return snapshots
 
+    def to_snapshot_graph(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False, edge_timestamp_data=False,
+                     node_data=False, return_length=False):
+        """
+        Return a dnx.SnapshotGraph of the impulse graph.
+
+        Parameters
+        ----------
+        number_of_snapshots : integer
+            Number of snapshots to divide the interval graph into.
+            Must be bigger than 2.
+        length_of_snapshots : integer or float
+            Length of snapshots to divide the interval graph into.
+            Must be bigger than 1.
+        multigraph : bool, optional (default= False)
+            If True, a networkx MultiGraph will be returned. If False, networkx Graph.
+        edge_data: bool, optional (default= False)
+            If True, edges will keep their attributes.
+        edge_timestamp_data : bool, optional (default= False)
+            If True, each edge's attribute will also include its timestamp data.
+            If `edge_data= True` and there already exist edge attributes named timestamp
+            it will be overwritten.
+        node_data : bool, optional (default= False)
+            if True, each node's attributes will be included.
+        return_length : bool, optional (default= False)
+            If true, the length of snapshots will be returned as the second argument.
+
+        See Also
+        --------
+        to_snapshots : divide the impulse graph to snapshots
+
+        Notes
+        -----
+        In order to create snapshots, timestamp of edges of the impulse graph must be numbers.
+
+        If multigraph= False, and edge_data=True or edge_timestamp_data=True,
+        in case there are multiple edges, only one will show with one of the edge's attributes.
+
+        Examples
+        --------
+        Snapshots of NetworkX Graph
+
+        >>> G = dnx.ImpulseGraph()
+        >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
+        >>> S, l = G.to_snapshot_graph(2, edge_timestamp_data=True, return_length=True)
+        >>> for g in S:
+        >>> ... g.edges(data=True))
+        [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
+        [(2, 4, {'timestamp': 15}), (4, 6, {'timestamp': 19})]
+
+        Snapshots of NetworkX MultiGraph
+
+        >>> S, l = G.to_snapshot_graph(3, multigraph=True, edge_timestamp_data=True, return_length=True)
+        >>> for g in S:
+        >>> ... g.edges(data=True))
+        [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
+        [(2, 4, {'timestamp': 15})]
+        [(6, 4, {'timestamp': 19})]
+        """
+
+        G = dnx.SnapshotGraph()
+
+        if return_length == True:
+            snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
+                                             length_of_snapshots=length_of_snapshots,
+                                             multigraph=multigraph, edge_data=edge_data,
+                                             edge_timestamp_data=edge_timestamp_data,
+                                             node_data=node_data, return_length=return_length)
+            for snapshot in snapshots:
+                G.insert(snapshot)
+
+            return G, l
+
+        else:
+            snapshots = self.to_snapshots(number_of_snapshots=number_of_snapshots,
+                                          length_of_snapshots=length_of_snapshots,
+                                          multigraph=multigraph, edge_data=edge_data,
+                                          edge_timestamp_data=edge_timestamp_data,
+                                          node_data=node_data, return_length=return_length)
+            for snapshot in snapshots:
+                G.insert(snapshot)
+
+            return G
+
+
     @staticmethod
     def from_networkx_graph(graph, timestamp='timestamp'):
         """Convert a NetworkX Graph to a ImpulseGraph.
@@ -1172,11 +1257,11 @@ class ImpulseGraph(object):
         return G
 
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, order=('u', 'v', 't'), comments="#"):
         """Read impulse graph in from path.
-           Every line in the file must be an edge in the following format: "node node timestamp".
            Timestamps must be integers or floats.
            Nodes can be any hashable objects.
+           Edge Attributes can be assigned with in the following format: Key=Value
 
         Parameters
         ----------
@@ -1189,6 +1274,9 @@ class ImpulseGraph(object):
         timestamptype : Python type, optional (default= float)
         Convert timestamp to this type.
         This must be an orderable type, ideally int or float. Other orderable types have not been fully tested.
+
+        order : Python 3-tuple, optional (default= ('u', 'v', 't'))
+        This must be a 3-tuple containing strings 'u', 'v', and 't'. 'u' specifies the starting node, 'v' the ending node, and 't' the timestamp.
 
         comments : string, optional
            Marker for comment lines
@@ -1222,6 +1310,9 @@ class ImpulseGraph(object):
         if delimiter == '=':
             raise ValueError("Delimiter cannot be =.")
 
+        if len(order) != 3 or 'u' not in order or 'v' not in order or 't' not in order:
+            raise ValueError("Order must be a 3-tuple containing strings 'u', 'v', and 't'.")
+
         with open(path, 'r') as file:
             for line in file:
                 p = line.find(comments)
@@ -1232,9 +1323,9 @@ class ImpulseGraph(object):
 
                 line = line.rstrip().split(delimiter)
 
-                u = line[0]
-                v = line[1]
-                t = line[2]
+                u = line[order.index('u')]
+                v = line[order.index('v')]
+                t = line[order.index('t')]
 
                 edgedata = {}
                 for data in line[3:]:

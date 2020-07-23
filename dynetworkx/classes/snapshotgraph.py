@@ -95,6 +95,36 @@ class SnapshotGraph(object):
         except TypeError:
             return False
 
+    def __iter__(self):
+        """Iterates through snapshots in snapshot graph.
+
+
+        Returns
+        -------
+        Iterable of snapshots
+
+        Examples
+        --------
+        >>> nxG1 = nx.Graph()
+        >>> nxG2 = nx.Graph()
+        >>>
+        >>> nxG1.add_edges_from([(1, 2), (1, 3)])
+        >>> nxG2.add_edges_from([(1, 4), (1, 3)])
+        >>>
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot(graph=nxG1)
+        >>> G.add_snapshot(graph=nxG2)
+        >>> for snapshot in G:
+                print(True)
+        True
+        True
+        """
+
+        return iter(self.snapshots)
+
+
+
+
     def insert(self, graph, snap_len=1, num_in_seq=None):
         """Insert a graph into the snapshot graph, with options for inserting at a given index, with some snapshot length.
 
@@ -850,7 +880,7 @@ class SnapshotGraph(object):
 
                 file.write(line)
 
-    def compute_network_statistic(self, nx_statistic_function, begin=None, end=None):
+    def compute_network_statistic(self, nx_statistic_function, begin=None, end=None, **kwargs):
         """Compute networkx statistics on each snapshot.
 
         Parameters
@@ -864,6 +894,9 @@ class SnapshotGraph(object):
         end : int, optional (default= None)
            Number of snapshot to end calculation
 
+        kwargs : optional
+           inputs for nx_statistic_function
+
         Examples
         --------
         >>> G.compute_network_statistic(nx.algorithms.centrality.degree_centrality)
@@ -871,5 +904,5 @@ class SnapshotGraph(object):
 
         output = []
         for graph in self.snapshots[begin:end]:
-            output.append(nx_statistic_function(graph))
+            output.append(nx_statistic_function(graph, **kwargs))
         return output

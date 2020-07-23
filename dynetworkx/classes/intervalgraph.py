@@ -1312,13 +1312,97 @@ class IntervalGraph(object):
 
         return snapshots
 
+    def to_snapshot_graph(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False,
+                         edge_timestamp_data=False,
+                         node_data=False, return_length=False):
+        """
+        Return a dnx.SnapshotGraph of the interval graph.
+
+        Parameters
+        ----------
+        number_of_snapshots : integer
+            Number of snapshots to divide the interval graph into.
+            Must be bigger than 2.
+        length_of_snapshots : integer or float
+            Length of snapshots to divide the interval graph into.
+            Must be bigger than 1.
+        multigraph : bool, optional (default= False)
+            If True, a networkx MultiGraph will be returned. If False, networkx Graph.
+        edge_data: bool, optional (default= False)
+            If True, edges will keep their attributes.
+        edge_timestamp_data : bool, optional (default= False)
+            If True, each edge's attribute will also include its timestamp data.
+            If `edge_data= True` and there already exist edge attributes named timestamp
+            it will be overwritten.
+        node_data : bool, optional (default= False)
+            if True, each node's attributes will be included.
+        return_length : bool, optional (default= False)
+            If true, the length of snapshots will be returned as the second argument.
+
+        See Also
+        --------
+        to_snapshots : divide the interval graph to snapshots
+
+        Notes
+        -----
+        In order to create snapshots, timestamps of edges of the interval graph must be numbers.
+
+        If multigraph= False, and edge_data=True or edge_timestamp_data=True,
+        in case there are multiple edges, only one will show with one of the edge's attributes.
+
+        Examples
+        --------
+        Snapshots of NetworkX Graph
+
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])
+        >>> S, l = G.to_snapshot_graph(2, edge_timestamp_data=True, return_length=True)
+        >>> for g in S:
+        >>> ... g.edges(data=True))
+        [(1, 2, {'start_time': 10, 'end_time': 11}), (2, 4, {'start_time': 11, 'end_time': 12})]
+        [(2, 4, {'start_time': 15, 'end_time': 16}), (4, 6, {'start_time': 19, 'end_time': 20})]
+
+        Snapshots of NetworkX MultiGraph
+
+        >>> S, l = G.to_snapshot_graph(3, multigraph=True, edge_timestamp_data=True, return_length=True)
+        >>> for g in S:
+        >>> ... g.edges(data=True))
+        [(1, 2, {'start_time': 10, 'end_time': 11}), (2, 4, {'start_time': 11, 'end_time': 12})]
+        [(2, 4, {'start_time': 15, 'end_time': 16})]
+        [(4, 6, {'start_time': 19, 'end_time': 20})]
+        """
+
+        G = dnx.SnapshotGraph()
+
+        if return_length == True:
+            snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
+                                             length_of_snapshots=length_of_snapshots,
+                                             multigraph=multigraph, edge_data=edge_data,
+                                             edge_timestamp_data=edge_timestamp_data,
+                                             node_data=node_data, return_length=return_length)
+            for snapshot in snapshots:
+                G.insert(snapshot)
+
+            return G, l
+
+        else:
+            snapshots = self.to_snapshots(number_of_snapshots=number_of_snapshots,
+                                          length_of_snapshots=length_of_snapshots,
+                                          multigraph=multigraph, edge_data=edge_data,
+                                          edge_timestamp_data=edge_timestamp_data,
+                                          node_data=node_data, return_length=return_length)
+            for snapshot in snapshots:
+                G.insert(snapshot)
+
+            return G
+
     @staticmethod
-    def from_snapshots(snapshotgraph, begin=0, period=1):
+    def from_snapshot_graph(snapshot_graph, begin=0, period=1):
         """Convert a SnapshotGraph to a IntervalGraph.
 
         Parameters
         ----------
-        snapshotgraph : SnapshotGraph
+        snapshot_graph : SnapshotGraph
 
         begin : integer or double
             Timestamp of first snapshot.
@@ -1339,13 +1423,12 @@ class IntervalGraph(object):
         >>> sg.add_edges_from([(5, 6), (7, 6)], [0])
         >>> sg.add_edges_from([(8, 9), (10, 11)], [0, 1])
         >>> sg.add_edges_from([(8,9)],weight=1)
-
-        >>> ig = IntervalGraph.from_snapshots(sg,0,1)
+        >>> ig = IntervalGraph.from_snapshot_graph(sg,0,1)
         """
         G = IntervalGraph()
         edge_dict = {}
 
-        for snapshot in snapshotgraph.get():
+        for snapshot in snapshot_graph.get():
             for edge in snapshot.edges(data=True):
                 if (edge[0], edge[1]) in edge_dict:
                     edge_dict[(edge[0], edge[1])] = (
@@ -1403,11 +1486,11 @@ class IntervalGraph(object):
         return G
 
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=int, intervaltype=float, comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, intervaltype=float, order=('u','v','begin','end'), comments="#"):
         """Read interval graph in from path.
-           Every line in the file must be an edge in the following format: "node node begin end".
            Both interval times must be integers or floats.
            Nodes can be any hashable objects.
+           Edge Attributes can be assigned with in the following format: Key=Value
 
         Parameters
         ----------
@@ -1421,11 +1504,15 @@ class IntervalGraph(object):
         Convert interval begin and end to this type.
         This must be an orderable type, ideally int or float. Other orderable types have not been fully tested.
 
+        order : Python 4-tuple, optional (default= ('u', 'v', 'begin', 'end'))
+        This must be a 4-tuple containing strings 'u', 'v', 'begin', and 'end'. 'u' specifies the starting node,
+        'v' the ending node, 'begin' the interval start time, and 'end' the interval end time.
+
         comments : string, optional
            Marker for comment lines
 
         delimiter : string, optional
-           Separator for node labels.  The default is whitespace.
+           Separator for node labels.  The default is whitespace. Cannot be =.
 
         Returns
         -------
@@ -1450,6 +1537,12 @@ class IntervalGraph(object):
 
         ig = IntervalGraph()
 
+        if delimiter == '=':
+            raise ValueError("Delimiter cannot be =.")
+
+        if len(order) != 4 or 'u' not in order or 'v' not in order or 'begin' not in order or 'end' not in order:
+            raise ValueError("Order must be a 4-tuple containing strings 'u', 'v', 'begin', and 'end'.")
+
         with open(path, 'r') as file:
             for line in file:
                 p = line.find(comments)
@@ -1459,10 +1552,10 @@ class IntervalGraph(object):
                     continue
 
                 line = line.rstrip().split(delimiter)
-                u = line[0]
-                v = line[1]
-                begin = line[2]
-                end = line[3]
+                u = line[order.index('u')]
+                v = line[order.index('v')]
+                begin = line[order.index('begin')]
+                end = line[order.index('end')]
 
                 edgedata = {}
                 for data in line[4:]:
