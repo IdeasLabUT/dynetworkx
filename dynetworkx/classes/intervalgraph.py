@@ -817,7 +817,8 @@ class IntervalGraph(object):
         [(Interval(3, 10, (1, 2)), 10)]
         """
         # If non of the nodes are defined the interval tree is queried for the list of edges,
-        # otherwise the edges are returned based on the nodes in the self._adj.o
+        # otherwise the edges are returned based on the nodes in the self._adj.
+
         if u is None and v is None:
             if begin is None and end is None:
                 iedges = self.tree.all_intervals
@@ -828,10 +829,19 @@ class IntervalGraph(object):
         else:
             # Node filtering
             if u is not None and v is not None:
+                if u not in self._adj:
+                    return []
+                if v not in self._adj:
+                    return []
+
                 iedges = [iv for iv in self._adj[u].keys() if iv.data[0] == v or iv.data[1] == v]
             elif u is not None:
+                if u not in self._adj:
+                    return []
                 iedges = self._adj[u].keys()
             else:
+                if v not in self._adj:
+                    return []
                 iedges = self._adj[v].keys()
 
             # Interval filtering
@@ -1430,16 +1440,21 @@ class IntervalGraph(object):
 
         for snapshot in snapshot_graph.get():
             for edge in snapshot.edges(data=True):
-                if (edge[0], edge[1]) in edge_dict:
-                    edge_dict[(edge[0], edge[1])] = (
-                        edge_dict[(edge[0], edge[1])][0], edge_dict[(edge[0], edge[1])][1] + period, edge[2])
+                u_v = (edge[0], edge[1])
+                if u_v in edge_dict:
+                    if begin in edge_dict[u_v]:
+                        edge_dict[u_v][begin + period] = edge_dict[u_v][begin]
+                        del edge_dict[u_v][begin]
+                    else:
+                        edge_dict[u_v][begin + period] = (begin, edge[2])
                 else:
-                    edge_dict[(edge[0], edge[1])] = (begin, begin + period, edge[2])
+                    edge_dict[u_v] = {begin + period: (begin, edge[2])}
 
             begin += period
 
-        for edge in edge_dict:
-            G.add_edge(edge[0], edge[1], edge_dict[edge][0], edge_dict[edge][1], **edge_dict[edge][2])
+        for edge_list in edge_dict:
+            for edge in edge_dict[edge_list]:
+                G.add_edge(edge_list[0], edge_list[1], edge_dict[edge_list][edge][0], edge, **edge_dict[edge_list][edge][1])
 
         return G
 
@@ -1486,7 +1501,7 @@ class IntervalGraph(object):
         return G
 
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=int, intervaltype=float, order=('u','v','begin','end'), comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, intervaltype=float, order=('u','v','begin','end'), merge=(False, 0), comments="#"):
         """Read interval graph in from path.
            Both interval times must be integers or floats.
            Nodes can be any hashable objects.
@@ -1505,8 +1520,13 @@ class IntervalGraph(object):
         This must be an orderable type, ideally int or float. Other orderable types have not been fully tested.
 
         order : Python 4-tuple, optional (default= ('u', 'v', 'begin', 'end'))
-        This must be a 4-tuple containing strings 'u', 'v', 'begin', and 'end'. 'u' specifies the starting node,
+        This may be a 4-tuple containing strings 'u', 'v', 'begin', and 'end'. 'u' specifies the starting node,
         'v' the ending node, 'begin' the interval start time, and 'end' the interval end time.
+        This may be a 4-tuple containing strings 'u', 'v', 'begin' or 'end', and duration.
+        Duration must be positive number greater than or equal to 1, must be in last position of tuple.
+
+        merge : 2-tuple, optional (default= (False, 0))
+        Attempt to merge discrete edge timestamps into continuous edges with specified grace period.
 
         comments : string, optional
            Marker for comment lines
@@ -1540,8 +1560,9 @@ class IntervalGraph(object):
         if delimiter == '=':
             raise ValueError("Delimiter cannot be =.")
 
-        if len(order) != 4 or 'u' not in order or 'v' not in order or 'begin' not in order or 'end' not in order:
-            raise ValueError("Order must be a 4-tuple containing strings 'u', 'v', 'begin', and 'end'.")
+        if len(order) != 4 or 'u' not in order or 'v' not in order or ('begin' not in order and 'end' not in order):
+            raise ValueError("Order must be a 4-tuple containing strings 'u', 'v', 'begin', and 'end' OR 'u', 'v', "
+                             "'begin' or 'end', and duration.")
 
         with open(path, 'r') as file:
             for line in file:
@@ -1554,8 +1575,16 @@ class IntervalGraph(object):
                 line = line.rstrip().split(delimiter)
                 u = line[order.index('u')]
                 v = line[order.index('v')]
-                begin = line[order.index('begin')]
-                end = line[order.index('end')]
+                if 'begin' in order and 'end' in order:
+                    begin = line[order.index('begin')]
+                    end = line[order.index('end')]
+                elif 'begin' in order:
+                    begin = intervaltype(line[order.index('begin')])
+                    end = begin + order[3]
+                elif 'end' in order:
+                    end = intervaltype(line[order.index('end')])
+                    begin = end - order[3]
+
 
                 edgedata = {}
                 for data in line[4:]:
@@ -1585,6 +1614,16 @@ class IntervalGraph(object):
                     end = intervaltype(end)
                 except:
                     raise TypeError("Failed to convert interval time to {}".format(intervaltype))
+
+                if merge[0] == True:
+                    for edge, edge_data in ig.edges(u, v, begin - merge[1], end + merge[1], data=True):
+                        if edge_data != edgedata:
+                            ig.add_edge(u, v, begin, end **edgedata)
+                        else:
+                            begin = min(begin, edge[0])
+                            end = max(end, edge[1])
+                            ig.remove_edge(u, v, edge[0], edge[1])
+                            ig.add_edge(u, v, begin, end, **edgedata)
 
                 ig.add_edge(u, v, begin, end, **edgedata)
 

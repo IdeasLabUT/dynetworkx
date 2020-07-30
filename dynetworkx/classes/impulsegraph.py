@@ -1391,3 +1391,5 @@ class ImpulseGraph(object):
                 line += '\n'
 
                 file.write(line)
+
+ig = ImpulseGraph.load_from_txt('C:/Git/structure-test/thiers_2011_edit.csv', delimiter=',', order=('t', 'u', 'v'))

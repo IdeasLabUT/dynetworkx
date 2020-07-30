@@ -267,23 +267,27 @@ def test_intervalgraph_from_networkx_graph_timestamp():
 def test_intervalgraph_from_snapshots_default():
     desired = dnx.IntervalGraph()
     desired.add_edge(1, 2, 0, 1)
+    desired.add_edge(1, 2, 2, 3)
     desired.add_edge(6, 7, 0, 1)
     desired.add_edge(5, 6, 0, 1)
     desired.add_edge(1, 4, 1, 2)
     desired.add_edge(1, 3, 0, 2)
     desired.add_edge(10, 11, 0, 2)
-    desired.add_edge(8, 9, 0, 2, weight=1)
+    desired.add_edge(8, 9, 0, 3, weight=1)
 
     sg = dnx.SnapshotGraph()
     sg.add_snapshot([(1, 2), (1, 3)])
     sg.add_snapshot([(1, 4), (1, 3)])
+    sg.add_snapshot([(1, 2)])
     sg.add_edges_from([(5, 6), (7, 6)], [0])
     sg.add_edges_from([(8, 9), (10, 11)], [0, 1])
     sg.add_edges_from([(8, 9)], weight=1)
 
-    actual = dnx.IntervalGraph.from_snapshots(sg)
+    actual = dnx.IntervalGraph.from_snapshot_graph(sg)
 
-    assert sorted(actual.edges(data=True)) == sorted(desired.edges(data=True))
+    assert len(actual.edges()) == len(desired.edges())
+    for edge in actual.edges(data=True):
+        assert edge in desired.edges(data=True)
 
 
 def test_intervalgraph_from_snapshots_begin():
@@ -303,9 +307,11 @@ def test_intervalgraph_from_snapshots_begin():
     sg.add_edges_from([(8, 9), (10, 11)], [0, 1])
     sg.add_edges_from([(8, 9)], weight=1)
 
-    actual = dnx.IntervalGraph.from_snapshots(sg, begin=10)
+    actual = dnx.IntervalGraph.from_snapshot_graph(sg, begin=10)
 
-    assert sorted(actual.edges(data=True)) == sorted(desired.edges(data=True))
+    assert len(actual.edges()) == len(desired.edges())
+    for edge in actual.edges(data=True):
+        assert edge in desired.edges(data=True)
 
 
 def test_intervalgraph_from_snapshots_period():
@@ -325,9 +331,11 @@ def test_intervalgraph_from_snapshots_period():
     sg.add_edges_from([(8, 9), (10, 11)], [0, 1])
     sg.add_edges_from([(8, 9)], weight=1)
 
-    actual = dnx.IntervalGraph.from_snapshots(sg, period=2)
+    actual = dnx.IntervalGraph.from_snapshot_graph(sg, period=2)
 
-    assert sorted(actual.edges(data=True)) == sorted(desired.edges(data=True))
+    assert len(actual.edges()) == len(desired.edges())
+    for edge in actual.edges(data=True):
+        assert edge in desired.edges(data=True)
 
 
 def test_intervalgraph_to_snapshots_default():
