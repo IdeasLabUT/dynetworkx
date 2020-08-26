@@ -646,7 +646,7 @@ class ImpulseGraph(object):
                 return True
         return False
 
-    def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True, True), data=False, default=None):
+    def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True, False), data=False, default=None):
         """Returns a list of Interval objects of the ImpulseGraph edges.
 
         All edges which are present within the given interval.
@@ -730,6 +730,9 @@ class ImpulseGraph(object):
         """
 
         iedges = []
+        if end is None:
+            inclusive = (inclusive[0], True)
+
         for edge in self.__search_tree(begin, end, inclusive=inclusive):
             if u is not None and v is not None and u == edge[0] and v == edge[1]:
                 iedges.append(edge)
@@ -857,6 +860,78 @@ class ImpulseGraph(object):
 
         return output
 
+    def flatten_graph(self, u=None, v=None, begin=None, end=None, data=False, default=None, keep_times=False,
+                      graph_type=Graph):
+        """Returns a NetworkX graph of all active edges between specified nodes during the given interval.
+
+        See ImpulseGraph.edges for more detailed description of edge selection behavior based on given inputs.
+
+        Parameters
+        ----------
+        u, v : nodes, optional (default=None)
+            Nodes can be, for example, strings or numbers.
+            Nodes must be hashable (and not None) Python objects.
+            If the node does not exist in the graph, a key error is raised.
+        begin: int or float, optional  (default= beginning of the entire impulse graph)
+        end: int or float, optional  (default= end of the entire impulse graph)
+            Must be bigger than or equal to begin.
+        data : string or bool, optional (default=False)
+            If True, include edge attributes in resulting graph.
+            If False, do not include edge attributes in resulting graph.
+            If string (name of the attribute), include only given attribute in resulting graph.
+        default : value, optional (default=None)
+            Default Value to be used for edges that don't have the requested attribute.
+            Only relevant if `data` is a string (name of an attribute).
+        keep_times : boolean, optional (default=False)
+            If True, add interval information to edge data in resulting graph.
+        graph_type : NetworkX Graph Function, optional (default=NetworkX.Graph)
+            Specifies type of graph to be returned by function.
+
+        Returns
+        -------
+        NetworkX Graph
+            Returns graph of all active edges between specified nodes during the given interval
+            When data is True, edges retain their attributes.
+            When keep_times is True, temporal data is added to edge attributes.
+
+        Examples
+        --------
+
+        >>> G = ImpulseGraph()
+        >>> G.add_edge(1, 2, 3, weight=4.3, color='red')
+        >>> G.add_edge(2, 4, 3, weight=1.3, color='blue')
+        >>> G.add_edge(3, 4, 6)
+
+        >>> G.flatten_graph(begin=3, end=3, data=True)
+        [(1, 2, {'weight': 4.3, 'color': 'red'}), (2, 4, {'weight': 1.3, 'color': 'blue'})]
+        >>> G.flatten_graph(begin=6, end=6, keep_times=True)
+        [(3, 4, {'timestamp': 6})]
+        >>> G.flatten_graph(begin=3, end=7)
+        [(1, 2), (2, 4), (4, 3)]
+        """
+
+        G = graph_type()
+
+        edges = self.edges(u, v, begin, end, data=data, default=default)
+        for edge in edges:
+            if data is True:
+                interval, attr = edge
+                u, v, t = interval
+            elif data is False:
+                u, v, t = edge
+                attr = {}
+            else:
+                interval, value = edge
+                u, v, t = interval
+                attr = {data: value}
+
+            if keep_times:
+                attr['timestamp'] = t
+
+            G.add_edge(u, v, **attr)
+
+        return G
+
     def __remove_iedge(self, iedge):
         """Remove the interval edge from the impulse graph.
 
@@ -896,7 +971,7 @@ class ImpulseGraph(object):
 
         return begin, end
 
-    def __search_tree(self, begin=None, end=None, inclusive=(True, True)):
+    def __search_tree(self, begin=None, end=None, inclusive=(True, False)):
         """if begin and end are equal performs a point search on the tree,
         otherwise an interval search is performed.
 
@@ -1391,5 +1466,3 @@ class ImpulseGraph(object):
                 line += '\n'
 
                 file.write(line)
-
-ig = ImpulseGraph.load_from_txt('C:/Git/structure-test/thiers_2011_edit.csv', delimiter=',', order=('t', 'u', 'v'))

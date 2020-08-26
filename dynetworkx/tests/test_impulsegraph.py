@@ -190,12 +190,12 @@ def test_impulsegraph_edges_slice():
     G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
 
     assert list(G.edges(begin=10)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
-    assert list(G.edges(end=11)) == [(1, 2, 10), (2, 4, 11)]
-    assert list(G.edges(begin=11, end=15)) == [(2, 4, 11), (2, 4, 15)]
+    assert list(G.edges(end=12)) == [(1, 2, 10), (2, 4, 11)]
+    assert list(G.edges(begin=11, end=16)) == [(2, 4, 11), (2, 4, 15)]
     assert list(G.edges(u=2)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15)]
     assert list(G.edges(v=2)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15)]
     assert list(G.edges(u=2, begin=11)) == [(2, 4, 11), (2, 4, 15)]
-    assert list(G.edges(u=2, v=4, end=11)) == [(2, 4, 11)]
+    assert list(G.edges(u=2, v=4, end=12)) == [(2, 4, 11)]
     assert list(G.edges(u=1, v=2)) == [(1, 2, 10)]
 
 
@@ -229,6 +229,17 @@ def test_impulsegraph_remove_edge_slice():
     G.remove_edge(1, 2, begin=2, end=11)
     assert G.has_edge(1, 2, begin=2, end=11) == False
     assert G.has_edge(1, 2)
+
+
+def test_impulsegraph_flatten_graph():
+    G = dnx.ImpulseGraph()
+    G.add_edge(1, 2, 3, weight=4.3, color='red')
+    G.add_edge(2, 4, 3, weight=1.3, color='blue')
+    G.add_edge(3, 4, 6)
+
+    assert list(G.flatten_graph(begin=3, end=3, data=True).edges(data=True)) == [(1, 2, {'weight': 4.3, 'color': 'red'}), (2, 4, {'weight': 1.3, 'color': 'blue'})]
+    assert list(G.flatten_graph(begin=6, end=6, keep_times=True).edges(data=True)) == [(3, 4, {'timestamp': 6})]
+    assert list(G.flatten_graph(begin=3, end=7).edges()) == [(1, 2), (2, 4), (4, 3)]
 
 
 def test_impulsegraph_from_networkx_graph_default():
