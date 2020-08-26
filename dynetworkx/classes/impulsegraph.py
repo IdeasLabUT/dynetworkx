@@ -292,7 +292,7 @@ class ImpulseGraph(object):
             else:
                 self.add_node(n, **attr)
 
-    def number_of_nodes(self, begin=None, end=None, inclusive=(True, True)):
+    def number_of_nodes(self, begin=None, end=None, inclusive=(True, False)):
         """Return the number of nodes in the impulse graph between the given interval.
 
         Parameters
@@ -324,11 +324,13 @@ class ImpulseGraph(object):
         >>> G.number_of_nodes(begin=5, end=8)
         2
         >>> G.number_of_nodes(end=11)
-        4
+        2
         """
 
         if begin is None and end is None:
             return len(self._node)
+        if end is None:
+            inclusive = (inclusive[0], True)
 
         inodes = set()
         for edge in self.__search_tree(begin, end, inclusive=inclusive):
@@ -337,7 +339,7 @@ class ImpulseGraph(object):
 
         return len(inodes)
 
-    def has_node(self, n, begin=None, end=None, inclusive=(True, True)):
+    def has_node(self, n, begin=None, end=None, inclusive=(True, False)):
         """Return True if the impulse graph contains the node n, during the given interval.
 
         Identical to `n in G` when 'begin' and 'end' are not defined.
@@ -386,7 +388,7 @@ class ImpulseGraph(object):
                 return True
         return False
 
-    def nodes(self, begin=None, end=None, inclusive=(True, True), data=False, default=None):
+    def nodes(self, begin=None, end=None, inclusive=(True, False), data=False, default=None):
         """A NodeDataView of the ImpulseGraph nodes.
 
         A nodes is considered to be present during an interval, if it has
@@ -455,7 +457,7 @@ class ImpulseGraph(object):
 
         return NodeDataView(node_dict, data=data, default=default)
 
-    def remove_node(self, n, begin=None, end=None, inclusive=(True, True)):
+    def remove_node(self, n, begin=None, end=None, inclusive=(True, False)):
         """Remove the presence of a node n within the given interval.
 
         Removes the presence node n and all adjacent edges within the given interval.
@@ -607,7 +609,7 @@ class ImpulseGraph(object):
                 raise NetworkXError("Edge tuple {0} must be a 3-tuple.".format(e))
             self.add_edge(e[0], e[1], e[2], **attr)
 
-    def has_edge(self, u, v, begin=None, end=None, inclusive=(True, True)):
+    def has_edge(self, u, v, begin=None, end=None, inclusive=(True, False)):
         """Return True if there exists an edge between u and v
         in the impulse graph, during the given interval.
 
@@ -752,7 +754,7 @@ class ImpulseGraph(object):
         return [((edge[0], edge[1], edge[3]), self._adj[edge[0]][edge][data]) if data in self._adj[edge[0]][edge]
                 else ((edge[0], edge[1], edge[3]), default) for edge in iedges]
 
-    def remove_edge(self, u, v, begin=None, end=None, inclusive=(True, True)):
+    def remove_edge(self, u, v, begin=None, end=None, inclusive=(True, False)):
         """Remove the edge between u and v in the impulse graph,
         during the given interval.
 
@@ -793,7 +795,7 @@ class ImpulseGraph(object):
         for edge in iedges:
             self.__remove_iedge(edge)
 
-    def degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, True)):
+    def degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, False)):
         """Return the degree of a specified node between time begin and end.
 
         Parameters
@@ -819,15 +821,17 @@ class ImpulseGraph(object):
         >>> G.add_edge(2, 3, 8)
         >>> G.degree(2)
         2
-        >>> G.degree(2,2)
+        >>> G.degree(2, 2)
         2
-        >>> G.degree(2,end=8)
+        >>> G.degree(2, end=8)
         1
         >>> G.degree()
         1.33333
-        >>> G.degree(2,delta=True)
+        >>> G.degree(2, delta=True)
         [(3, 1), (8, 1)]
         """
+        if end is None:
+            inclusive = (inclusive[0], True)
         # no specified node, return mean degree
         if node == None:
             n = 0
@@ -851,7 +855,7 @@ class ImpulseGraph(object):
         output = []
 
         # for each edge determine if the begin and/or end value is in specified time period
-        for edge in self.edges(u=node, begin=begin, end=end, inclusive=(True, True)):
+        for edge in self.edges(u=node, begin=begin, end=end, inclusive=inclusive):
             d.setdefault(edge[2], []).append((edge[0], edge[1]))
 
         # for each time in Dict add to output list the len of each value
@@ -859,78 +863,6 @@ class ImpulseGraph(object):
             output.append((time, len(d[time])))
 
         return output
-
-    def flatten_graph(self, u=None, v=None, begin=None, end=None, data=False, default=None, keep_times=False,
-                      graph_type=Graph):
-        """Returns a NetworkX graph of all active edges between specified nodes during the given interval.
-
-        See ImpulseGraph.edges for more detailed description of edge selection behavior based on given inputs.
-
-        Parameters
-        ----------
-        u, v : nodes, optional (default=None)
-            Nodes can be, for example, strings or numbers.
-            Nodes must be hashable (and not None) Python objects.
-            If the node does not exist in the graph, a key error is raised.
-        begin: int or float, optional  (default= beginning of the entire impulse graph)
-        end: int or float, optional  (default= end of the entire impulse graph)
-            Must be bigger than or equal to begin.
-        data : string or bool, optional (default=False)
-            If True, include edge attributes in resulting graph.
-            If False, do not include edge attributes in resulting graph.
-            If string (name of the attribute), include only given attribute in resulting graph.
-        default : value, optional (default=None)
-            Default Value to be used for edges that don't have the requested attribute.
-            Only relevant if `data` is a string (name of an attribute).
-        keep_times : boolean, optional (default=False)
-            If True, add interval information to edge data in resulting graph.
-        graph_type : NetworkX Graph Function, optional (default=NetworkX.Graph)
-            Specifies type of graph to be returned by function.
-
-        Returns
-        -------
-        NetworkX Graph
-            Returns graph of all active edges between specified nodes during the given interval
-            When data is True, edges retain their attributes.
-            When keep_times is True, temporal data is added to edge attributes.
-
-        Examples
-        --------
-
-        >>> G = ImpulseGraph()
-        >>> G.add_edge(1, 2, 3, weight=4.3, color='red')
-        >>> G.add_edge(2, 4, 3, weight=1.3, color='blue')
-        >>> G.add_edge(3, 4, 6)
-
-        >>> G.flatten_graph(begin=3, end=3, data=True)
-        [(1, 2, {'weight': 4.3, 'color': 'red'}), (2, 4, {'weight': 1.3, 'color': 'blue'})]
-        >>> G.flatten_graph(begin=6, end=6, keep_times=True)
-        [(3, 4, {'timestamp': 6})]
-        >>> G.flatten_graph(begin=3, end=7)
-        [(1, 2), (2, 4), (4, 3)]
-        """
-
-        G = graph_type()
-
-        edges = self.edges(u, v, begin, end, data=data, default=default)
-        for edge in edges:
-            if data is True:
-                interval, attr = edge
-                u, v, t = interval
-            elif data is False:
-                u, v, t = edge
-                attr = {}
-            else:
-                interval, value = edge
-                u, v, t = interval
-                attr = {data: value}
-
-            if keep_times:
-                attr['timestamp'] = t
-
-            G.add_edge(u, v, **attr)
-
-        return G
 
     def __remove_iedge(self, iedge):
         """Remove the interval edge from the impulse graph.
@@ -992,7 +924,7 @@ class ImpulseGraph(object):
             for edge in self.tree[t]:
                 yield (*edge, t)
 
-    def __in_interval(self, t, begin, end, inclusive=(True, True)):
+    def __in_interval(self, t, begin, end, inclusive=(True, False)):
         """
         Parameters
         ----------
@@ -1022,7 +954,7 @@ class ImpulseGraph(object):
         if inclusive == (False, False):
             return t > begin and t < end
 
-    def to_subgraph(self, begin, end, inclusive=(True, True), multigraph=False, edge_data=False,
+    def to_subgraph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
                     edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.

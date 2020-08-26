@@ -1018,82 +1018,6 @@ class IntervalGraph(object):
 
         return output
 
-    def flatten_graph(self, u=None, v=None, begin=None, end=None, data=False, default=None, keep_times=False,
-                      graph_type=Graph):
-        """Returns a NetworkX graph of all active edges between specified nodes during the given interval.
-
-        See IntervalGraph.edges for more detailed description of edge selection behavior based on given inputs.
-
-        Parameters
-        ----------
-        u, v : nodes, optional (default=None)
-            Nodes can be, for example, strings or numbers.
-            Nodes must be hashable (and not None) Python objects.
-            If the node does not exist in the graph, a key error is raised.
-        begin: int or float, optional  (default= beginning of the entire interval graph)
-            Inclusive beginning time of the edge appearing in the interval graph.
-        end: int or float, optional  (default= end of the entire interval graph + 1)
-            Non-inclusive ending time of the edge appearing in the interval graph.
-            Must be bigger than or equal to begin.
-            Note that the default value is shifted up by 1 to make it an inclusive end.
-        data : string or bool, optional (default=False)
-            If True, include edge attributes in resulting graph.
-            If False, do not include edge attributes in resulting graph.
-            If string (name of the attribute), include only given attribute in resulting graph.
-        default : value, optional (default=None)
-            Default Value to be used for edges that don't have the requested attribute.
-            Only relevant if `data` is a string (name of an attribute).
-        keep_times : boolean, optional (default=False)
-            If True, add interval information to edge data in resulting graph.
-        graph_type : NetworkX Graph Function, optional (default=NetworkX.Graph)
-            Specifies type of graph to be returned by function.
-
-        Returns
-        -------
-        NetworkX Graph
-            Returns graph of all active edges between specified nodes during the given interval
-            When data is True, edges retain their attributes.
-            When keep_times is True, temporal data is added to edge attributes.
-        Examples
-        --------
-
-        >>> G = IntervalGraph()
-        >>> G.add_edge(1, 2, 3, 4, weight=4.3, color='red')
-        >>> G.add_edge(2, 4, 3, 8, weight=1.3, color='blue')
-        >>> G.add_edge(3, 4, 6, 12)
-
-        >>> G.flatten_graph(begin=7, end=7, data=True)
-        [(2, 4, {'weight': 1.3, 'color': 'blue'}), (4, 3, {})]
-        >>> G.flatten_graph(begin=7, end=7, keep_times=True)
-        [(2, 4, {'interval_start': 3, 'interval_end': 8}), (4, 3, {'interval_start': 6, 'interval_end': 12})]
-        >>> G.flatten_graph(begin=3, end=7)
-        [(2, 4), (2, 1), (4, 3)]
-        """
-
-        G = graph_type()
-
-        edges = self.edges(u, v, begin, end, data, default)
-        for edge in edges:
-            if data is True:
-                interval, attr = edge
-                u, v = interval[2]
-            elif data is False:
-                interval = edge
-                attr = {}
-                u, v = interval[2]
-            else:
-                interval, value = edge
-                u, v = interval[2]
-                attr = {data: value}
-
-            if keep_times:
-                attr['interval_start'] = interval[0]
-                attr['interval_end'] = interval[1]
-
-            G.add_edge(u, v, **attr)
-
-        return G
-
     def __remove_iedge(self, iedge):
         """Remove the interval edge from the interval graph.
 
@@ -1738,15 +1662,3 @@ class IntervalGraph(object):
                 line += '\n'
 
                 file.write(line)
-
-G = IntervalGraph()
-G.add_edge(1, 2, 3, 4, weight=4.3, color='red')
-G.add_edge(2, 4, 3, 8, weight=1.3, color='blue')
-G.add_edge(3, 4, 6, 12)
-
-G.flatten_graph(begin=7, end=7, data=True)
-#[(2, 4, {'weight': 1.3, 'color': 'blue'}), (4, 3, {})]
-G.flatten_graph(begin=7, end=7, keep_times=True)
-#[(2, 4, {'interval_start': 3, 'interval_end': 8}), (4, 3, {'interval_start': 6, 'interval_end': 12})]
-G.flatten_graph(begin=3, end=7)
-#[(2, 4), (2, 1), (4, 3)]

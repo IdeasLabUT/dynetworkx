@@ -236,17 +236,6 @@ def test_intervalgraph_remove_edge_slice():
     assert G.has_edge(1, 2)
 
 
-def test_intervalgraph_flatten_graph():
-    G = dnx.IntervalGraph()
-    G.add_edge(1, 2, 3, 4, weight=4.3, color='red')
-    G.add_edge(2, 4, 3, 8, weight=1.3, color='blue')
-    G.add_edge(3, 4, 6, 12)
-
-    assert list(G.flatten_graph(begin=7, end=7, data=True).edges(data=True)) == [(2, 4, {'weight': 1.3, 'color': 'blue'}), (4, 3, {})]
-    assert list(G.flatten_graph(begin=7, end=7, keep_times=True).edges(data=True)) == [(2, 4, {'interval_start': 3, 'interval_end': 8}), (4, 3, {'interval_start': 6, 'interval_end': 12})]
-    assert list(G.flatten_graph(begin=3, end=7).edges()) == [(2, 4), (2, 1), (4, 3)]
-
-
 def test_intervalgraph_from_networkx_graph_default():
     desired = dnx.IntervalGraph()
     desired.add_edge(1, 2, 10, 11, weight=1.5)

@@ -88,7 +88,7 @@ def test_impulsegraph_number_of_nodes():
     assert G.number_of_nodes() == 4
     assert G.number_of_nodes(begin=6) == 2
     assert G.number_of_nodes(begin=5, end=8) == 2
-    assert G.number_of_nodes(end=11) == 4
+    assert G.number_of_nodes(end=11) == 2
 
 
 def test_impulsegraph_has_node():
@@ -229,17 +229,6 @@ def test_impulsegraph_remove_edge_slice():
     G.remove_edge(1, 2, begin=2, end=11)
     assert G.has_edge(1, 2, begin=2, end=11) == False
     assert G.has_edge(1, 2)
-
-
-def test_impulsegraph_flatten_graph():
-    G = dnx.ImpulseGraph()
-    G.add_edge(1, 2, 3, weight=4.3, color='red')
-    G.add_edge(2, 4, 3, weight=1.3, color='blue')
-    G.add_edge(3, 4, 6)
-
-    assert list(G.flatten_graph(begin=3, end=3, data=True).edges(data=True)) == [(1, 2, {'weight': 4.3, 'color': 'red'}), (2, 4, {'weight': 1.3, 'color': 'blue'})]
-    assert list(G.flatten_graph(begin=6, end=6, keep_times=True).edges(data=True)) == [(3, 4, {'timestamp': 6})]
-    assert list(G.flatten_graph(begin=3, end=7).edges()) == [(1, 2), (2, 4), (4, 3)]
 
 
 def test_impulsegraph_from_networkx_graph_default():
