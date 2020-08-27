@@ -3,6 +3,8 @@ from sortedcontainers import SortedDict
 
 from dynetworkx.classes.intervalgraph import IntervalGraph
 from intervaltree import IntervalTree, Interval
+from networkx.classes.digraph import DiGraph
+from networkx.classes.multidigraph import MultiDiGraph
 
 
 class IntervalDiGraph(IntervalGraph):
@@ -657,6 +659,96 @@ class IntervalDiGraph(IntervalGraph):
                 output.append((time[0], current_degree))
 
         return sorted(output)
+
+    def to_networkx_graph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
+        """Return a networkx DiGraph or MultiDiGraph which includes all the nodes and
+        edges which have overlapping intervals with the given interval.
+
+        Wrapper function for IntervalDiGraph.to_subgraph. Refer to IntervalDiGraph.to_subgraph for full description.
+        """
+        return self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data, edge_interval_data=edge_interval_data, node_data=node_data)
+
+
+    def to_subgraph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
+        """Return a networkx DiGraph or MultiDiGraph which includes all the nodes and
+        edges which have overlapping intervals with the given interval.
+
+        Parameters
+        ----------
+        begin: int or float
+            Inclusive beginning time of the edge appearing in the interval graph.
+        end: int or float
+            Non-inclusive ending time of the edge appearing in the interval graph.
+            Must be bigger than or equal to begin.
+        multigraph: bool, optional (default= False)
+            If True, a networkx MultiGraph will be returned. If False, networkx Graph.
+        edge_data: bool, optional (default= False)
+            If True, edges will keep their attributes.
+        edge_interval_data: bool, optional (default= False)
+            If True, each edge's attribute will also include its begin and end interval data.
+            If `edge_data= True` and there already exist edge attributes with names begin and end,
+            they will be overwritten.
+        node_data : bool, optional (default= False)
+            If True, each node's attributes will be included.
+
+        See Also
+        --------
+        to_snapshots : divide the interval graph to snapshots
+
+        Notes
+        -----
+        If multigraph= False, and edge_data=True or edge_interval_data=True,
+        in case there are multiple edges, only one will show with one of the edge's attributes.
+
+        Note: nodes with no edges will not appear in any subgraph.
+
+        Examples
+        --------
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_edges_from([(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)])
+        >>> H = G.to_subgraph(4, 12)
+        >>> type(H)
+        <class 'networkx.classes.graph.DiGraph'>
+        >>> list(H.edges(data=True))
+        [(1, 2, {}), (2, 4, {})]
+
+        >>> H = G.to_subgraph(4, 12, edge_interval_data=True)
+        >>> type(H)
+        <class 'networkx.classes.graph.DiGraph'>
+        >>> list(H.edges(data=True))
+        [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 15, 'begin': 8})]
+
+        >>> M = G.to_subgraph(4, 12, multigraph=True, edge_interval_data=True)
+        >>> type(M)
+        <class 'networkx.classes.multigraph.MultiDiGraph'>
+        >>> list(M.edges(data=True))
+        [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 11, 'begin': 1}), (2, 4, {'end': 15, 'begin': 8})]
+        """
+        iedges = self.__search_tree(begin, end)
+
+        if multigraph:
+            G = MultiDiGraph()
+        else:
+            G = DiGraph()
+
+        if edge_data and edge_interval_data:
+            G.add_edges_from((iedge.data[0], iedge.data[1],
+                              dict(self._adj[iedge.data[0]][iedge], begin=iedge.begin, end=iedge.end))
+                             for iedge in iedges)
+        elif edge_data:
+            G.add_edges_from((iedge.data[0], iedge.data[1], self._adj[iedge.data[0]][iedge].copy())
+                             for iedge in iedges)
+        elif edge_interval_data:
+            G.add_edges_from((iedge.data[0], iedge.data[1], {'begin': iedge.begin, 'end': iedge.end})
+                             for iedge in iedges)
+        else:
+            G.add_edges_from((iedge.data[0], iedge.data[1]) for iedge in iedges)
+
+        # include node attributes
+        if node_data:
+            G.add_nodes_from((n, self._node[n].copy()) for n in G.nodes)
+
+        return G
 
     def __remove_iedge(self, iedge):
         """Remove the interval edge from the interval graph.

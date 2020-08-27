@@ -1,8 +1,8 @@
 from dynetworkx.classes.impulsegraph import ImpulseGraph
-from networkx.classes.graph import Graph
+from networkx.classes.digraph import DiGraph
 from networkx.exception import NetworkXError
 from sortedcontainers import SortedDict, SortedList
-from networkx.classes.multigraph import MultiGraph
+from networkx.classes.multidigraph import MultiDiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
 
 
@@ -616,6 +616,96 @@ class ImpulseDiGraph(ImpulseGraph):
             output.append((time, len(d[time])))
 
         return output
+
+    def to_networkx_graph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
+                    edge_timestamp_data=False, node_data=False):
+        """Return a networkx Graph or MultiGraph which includes all the nodes and
+        edges which have timestamps within the given interval.
+
+        Wrapper function for ImpulseGraph.to_subgraph. Refer to ImpulseGraph.to_subgraph for full description.
+        """
+        return self.to_subgraph(begin=begin, end=end, inclusive=inclusive, multigraph=multigraph, edge_data=edge_data, edge_timestamp_data=edge_timestamp_data, node_data=node_data)
+
+
+    def to_subgraph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
+                    edge_timestamp_data=False, node_data=False):
+        """Return a networkx Graph or MultiGraph which includes all the nodes and
+        edges which have timestamps within the given interval.
+
+        Parameters
+        ----------
+        begin: int or float
+        end: int or float
+            Must be bigger than or equal to begin.
+        inclusive: 2-tuple boolean that determines inclusivity of begin and end
+        multigraph: bool, optional (default= False)
+            If True, a networkx MultiGraph will be returned. If False, networkx Graph.
+        edge_data: bool, optional (default= False)
+            If True, edges will keep their attributes.
+        edge_timestamp_data: bool, optional (default= False)
+            If True, each edge's attribute will also include its timestamp data.
+            If `edge_data= True` and there already exist edge attributes named timestamp
+            it will be overwritten.
+        node_data : bool, optional (default= False)
+            if True, each node's attributes will be included.
+
+        See Also
+        --------
+        to_snapshots : divide the impulse graph to snapshots
+
+        Notes
+        -----
+        If multigraph= False, and edge_data=True or edge_interval_data=True,
+        in case there are multiple edges, only one will show with one of the edge's attributes.
+
+        Note: nodes with no edges will not appear in any subgraph.
+
+        Examples
+        --------
+        >>> G = dnx.ImpulseGraph()
+        >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
+        >>> H = G.to_subgraph(4, 12)
+        >>> type(H)
+        <class 'networkx.classes.graph.DiGraph'>
+        >>> list(H.edges(data=True))
+        [(1, 2, {}), (2, 4, {})]
+
+        >>> H = G.to_subgraph(10, 12, edge_timestamp_data=True)
+        >>> type(H)
+        <class 'networkx.classes.graph.DiGraph'>
+        >>> list(H.edges(data=True))
+        [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
+
+        >>> M = G.to_subgraph(4, 12, multigraph=True, edge_timestamp_data=True)
+        >>> type(M)
+        <class 'networkx.classes.multigraph.MultiDiGraph'>
+        >>> list(M.edges(data=True))
+        [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
+        """
+        iedges = self.__search_tree(begin, end, inclusive=inclusive)
+
+        if multigraph:
+            G = MultiDiGraph()
+        else:
+            G = DiGraph()
+
+        if edge_data and edge_timestamp_data:
+            G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[3]))
+                             for iedge in iedges)
+        elif edge_data:
+            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge])
+                             for iedge in iedges)
+        elif edge_timestamp_data:
+            G.add_edges_from((iedge[0], iedge[1], {'timestamp': iedge[3]})
+                             for iedge in iedges)
+        else:
+
+            G.add_edges_from((iedge[0], iedge[1]) for iedge in iedges)
+
+        if node_data:
+            G.add_nodes_from((n, self._node[n].copy()) for n in G.nodes)
+
+        return G
 
     def __remove_iedge(self, iedge):
         """Remove the impulse edge from the impulse graph.

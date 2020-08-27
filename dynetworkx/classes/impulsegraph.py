@@ -954,6 +954,17 @@ class ImpulseGraph(object):
         if inclusive == (False, False):
             return t > begin and t < end
 
+
+    def to_networkx_graph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
+                    edge_timestamp_data=False, node_data=False):
+        """Return a networkx Graph or MultiGraph which includes all the nodes and
+        edges which have timestamps within the given interval.
+
+        Wrapper function for ImpulseGraph.to_subgraph. Refer to ImpulseGraph.to_subgraph for full description.
+        """
+        return self.to_subgraph(begin=begin, end=end, inclusive=inclusive, multigraph=multigraph, edge_data=edge_data, edge_timestamp_data=edge_timestamp_data, node_data=node_data)
+
+
     def to_subgraph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
                     edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and

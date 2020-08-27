@@ -1133,6 +1133,16 @@ class IntervalGraph(object):
         # need to check for iv.contains(begin) in case begin == end
         return iv.overlaps(begin, end) or iv.contains_point(begin)
 
+
+    def to_networkx_graph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
+        """Return a networkx Graph or MultiGraph which includes all the nodes and
+        edges which have overlapping intervals with the given interval.
+
+        Wrapper function for IntervalGraph.to_subgraph. Refer to IntervalGraph.to_subgraph for full description.
+        """
+        return self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data, edge_interval_data=edge_interval_data, node_data=node_data)
+
+
     def to_subgraph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have overlapping intervals with the given interval.
@@ -1153,7 +1163,7 @@ class IntervalGraph(object):
             If `edge_data= True` and there already exist edge attributes with names begin and end,
             they will be overwritten.
         node_data : bool, optional (default= False)
-            if True, each node's attributes will be included.
+            If True, each node's attributes will be included.
 
         See Also
         --------
