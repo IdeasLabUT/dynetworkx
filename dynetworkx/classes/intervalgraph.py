@@ -1668,7 +1668,7 @@ class IntervalGraph(object):
 
         with open(path, 'w') as file:
             for edge in self.edges(data=True):
-                line = str(edge[0][0]) + delimiter + str(edge[0][1]) + delimiter + str(edge[0][2])
+                line = str(edge[0][2][0]) + delimiter + str(edge[0][2][1]) + delimiter + str(edge[0][0]) + delimiter + str(edge[0][1])
                 for key in edge[1]:
                     line += delimiter + str(key) + '=' + str(edge[1][key])
                 line += '\n'
