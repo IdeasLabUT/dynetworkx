@@ -1133,15 +1133,14 @@ class IntervalGraph(object):
         # need to check for iv.contains(begin) in case begin == end
         return iv.overlaps(begin, end) or iv.contains_point(begin)
 
-
     def to_networkx_graph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have overlapping intervals with the given interval.
 
         Wrapper function for IntervalGraph.to_subgraph. Refer to IntervalGraph.to_subgraph for full description.
         """
-        return self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data, edge_interval_data=edge_interval_data, node_data=node_data)
-
+        return self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data, edge_interval_data=edge_interval_data,
+                                node_data=node_data)
 
     def to_subgraph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
@@ -1539,6 +1538,7 @@ class IntervalGraph(object):
 
         merge : 2-tuple, optional (default= (False, 0))
         Attempt to merge discrete edge timestamps into continuous edges with specified grace period.
+        Note: grace period is offset by +-1 to provide inclusive ends. See IntervalGraph.edges for more information.
 
         comments : string, optional
            Marker for comment lines
@@ -1598,14 +1598,16 @@ class IntervalGraph(object):
                     begin = end - order[3]
 
                 edgedata = {}
-                for data in line[4:]:
-                    key, value = data.split('=')
-
-                    try:
-                        value = float(value)
-                    except:
-                        pass
-                    edgedata[key] = value
+                try:
+                    for data in line[4:]:
+                        key, value = data.split('=')
+                        try:
+                            value = float(value)
+                        except:
+                            pass
+                        edgedata[key] = value
+                except:
+                    pass
 
                 if nodetype is not int:
                     try:
@@ -1626,8 +1628,8 @@ class IntervalGraph(object):
                 except:
                     raise TypeError("Failed to convert interval time to {}".format(intervaltype))
 
-                if merge[0] == True:
-                    for edge, edge_data in ig.edges(u, v, begin - merge[1], end + merge[1], data=True):
+                if merge[0]:
+                    for edge, edge_data in ig.edges(u, v, begin - merge[1] - 1, end + merge[1] + 1, data=True):
                         if edge_data != edgedata:
                             ig.add_edge(u, v, begin, end ** edgedata)
                         else:
