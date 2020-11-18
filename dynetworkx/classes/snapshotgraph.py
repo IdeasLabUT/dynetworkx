@@ -212,6 +212,7 @@ class SnapshotGraph(object):
             g.add_edges_from(ebunch)
         else:
             g = graph
+
         if not num_in_seq:
             num_in_seq = len(self.snapshots)
 
@@ -249,21 +250,23 @@ class SnapshotGraph(object):
         [(4, 6, {})]
         """
 
-        if sbunch:
-            if len(sbunch) != len(nbunch):
-                raise ValueError(
-                    'node list({}) must be equal in length to number of desired snapshots({})'.format(len(nbunch),
-                                                                                                      len(sbunch)))
-            min_index = min(sbunch)
-            max_index = max(sbunch)
-        else:
-            min_index = 0
-            max_index = len(self.snapshots)
+        # if sbunch:
+        #     if len(sbunch) != len(nbunch):
+        #         raise ValueError(
+        #             'node list({}) must be equal in length to number of desired snapshots({})'.format(len(nbunch),
+        #                                                                                               len(sbunch)))
+        #     min_index = min(sbunch)
+        #     max_index = max(sbunch)
+        # else:
+        #     min_index = 0
+        #     max_index = len(self.snapshots)
 
-        graph_list = self.snapshots[min_index:max_index + 1]
+        keys = self.snapshots.keys()
         # only get the indexes wanted
         if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        else:
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         subgraph = SnapshotGraph()
 
@@ -305,18 +308,12 @@ class SnapshotGraph(object):
         """
         # returns a list of degrees for each graph snapshot in snapshots
         # use generator to create list of degrees
-        if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
-        else:
-            min_index = 0
-            max_index = len(self.snapshots)
 
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:(max_index + 1)]
-        # only get the indexes wanted
+        keys = self.snapshots.keys()
         if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        else:
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return_degrees = []
 
@@ -355,17 +352,12 @@ class SnapshotGraph(object):
         [3, 3]
         """
         # returns a list of the number of nodes in each graph in the range
+
+        keys = self.snapshots.keys()
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.number_of_nodes() for g in graph_list]
 
@@ -395,17 +387,13 @@ class SnapshotGraph(object):
         [3, 3]
         """
         # returns a list of the order of the graph in the range
+
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.order() for g in graph_list]
 
@@ -436,18 +424,13 @@ class SnapshotGraph(object):
         [True, True]
 
         """
-        # returns a list of the order of the graph in the range
+
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.has_node(n) for g in graph_list]
 
@@ -477,18 +460,13 @@ class SnapshotGraph(object):
         [False, False]
 
         """
-        # returns a list of the order of the graph in the range
+
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.is_multigraph() for g in graph_list]
 
@@ -518,18 +496,13 @@ class SnapshotGraph(object):
         [False, False]
 
         """
-        # returns a list of the order of the graph in the range
+
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.is_directed() for g in graph_list]
 
@@ -557,18 +530,13 @@ class SnapshotGraph(object):
         [<networkx.classes.digraph.DiGraph object at 0x7f1a6de49dd8>, <networkx.classes.digraph.DiGraph object at 0x7f1a6de49e10>]
 
         """
-        # returns a list of the order of the graph in the range
+
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.to_directed() for g in graph_list]
 
@@ -597,18 +565,12 @@ class SnapshotGraph(object):
 
         """
 
-        # returns a list of the order of the graph in the range
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.to_undirected() for g in graph_list]
 
@@ -641,18 +603,13 @@ class SnapshotGraph(object):
         [2, 2]
 
         """
-        # returns a list of the order of the graph in the range
+
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return [g.size(weight=weight) for g in graph_list]
 
@@ -683,17 +640,12 @@ class SnapshotGraph(object):
         [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
 
         """
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
-        else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        else:  # if sbunch is not specified, return all graphs as a list
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         return graph_list
 
@@ -738,17 +690,12 @@ class SnapshotGraph(object):
          [0 0 0 0 0 0 0]]
 
         """
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         for g in graph_list:
             g.add_nodes_from(nbunch, **attrs)
@@ -798,17 +745,12 @@ class SnapshotGraph(object):
          [0 0 0 0 0 1 0]]
 
         """
+        keys = self.snapshots.keys()
+
         if sbunch:
-            min_index = min(sbunch)
-            max_index = max(sbunch)
+            graph_list = [self.snapshots[keys[index]] for index in sbunch]
         else:
-            min_index = 0
-            max_index = len(self.snapshots)
-        # get all indexes between min and max
-        graph_list = self.snapshots[min_index:max_index + 1]
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [graph_list[index - min_index] for index in sbunch]
+            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
 
         for g in graph_list:
             g.add_edges_from(ebunch, **attrs)
@@ -923,6 +865,6 @@ class SnapshotGraph(object):
         """
 
         output = []
-        for graph in self.snapshots[begin:end]:
+        for graph in self.snapshots.values()[begin:end]:
             output.append(nx_statistic_function(graph, **kwargs))
         return output
