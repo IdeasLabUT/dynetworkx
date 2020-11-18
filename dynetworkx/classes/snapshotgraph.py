@@ -250,17 +250,6 @@ class SnapshotGraph(object):
         [(4, 6, {})]
         """
 
-        # if sbunch:
-        #     if len(sbunch) != len(nbunch):
-        #         raise ValueError(
-        #             'node list({}) must be equal in length to number of desired snapshots({})'.format(len(nbunch),
-        #                                                                                               len(sbunch)))
-        #     min_index = min(sbunch)
-        #     max_index = max(sbunch)
-        # else:
-        #     min_index = 0
-        #     max_index = len(self.snapshots)
-
         keys = self.snapshots.keys()
         # only get the indexes wanted
         if sbunch:
