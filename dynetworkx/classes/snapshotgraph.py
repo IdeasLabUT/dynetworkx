@@ -157,11 +157,11 @@ class SnapshotGraph(object):
         if not num_in_seq:
             num_in_seq = len(self.snapshots)
 
-        # if num_in_seq > len(self.snapshots):
-        #     raise ValueError(
-        #         'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
-        #                                                                                             len(
-        #                                                                                                 self.snapshots)))
+        if num_in_seq > len(self.snapshots):
+            raise ValueError(
+                'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
+                                                                                                    len(
+                                                                                                        self.snapshots)))
         if len(self.snapshots) == 0:
             high = POS_INF
             low = NEG_INF
