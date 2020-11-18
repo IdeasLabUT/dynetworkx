@@ -1,12 +1,17 @@
 from networkx.classes.graph import Graph
 import numpy as np
 from networkx import adjacency_matrix, from_numpy_array
+from sortedcontainers import SortedDict
+
+NEG_INF = float(-10000000000)
+POS_INF = float(10000000000)
+
 
 class SnapshotGraph(object):
     def __init__(self, **attr):
         self.graph = {}
         self.graph.update(attr)
-        self.snapshots = []
+        self.snapshots = SortedDict()
 
     @property
     def name(self):
@@ -91,7 +96,7 @@ class SnapshotGraph(object):
         """
 
         try:
-            return graph in self.snapshots
+            return graph in self.snapshots.values()
         except TypeError:
             return False
 
@@ -120,10 +125,7 @@ class SnapshotGraph(object):
         True
         """
 
-        return iter(self.snapshots)
-
-
-
+        return iter(self.snapshots.values())
 
     def insert(self, graph, snap_len=1, num_in_seq=None):
         """Insert a graph into the snapshot graph, with options for inserting at a given index, with some snapshot length.
@@ -155,14 +157,34 @@ class SnapshotGraph(object):
         if not num_in_seq:
             num_in_seq = len(self.snapshots)
 
-        if num_in_seq > len(self.snapshots):
-            raise ValueError(
-                'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
-                                                                                                    len(
-                                                                                                        self.snapshots)))
+        # if num_in_seq > len(self.snapshots):
+        #     raise ValueError(
+        #         'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
+        #                                                                                             len(
+        #                                                                                                 self.snapshots)))
+        if len(self.snapshots) == 0:
+            high = POS_INF
+            low = NEG_INF
+        else:
+            keys = self.snapshots.keys()
+
+            if num_in_seq == len(self.snapshots):
+                high = POS_INF
+                low = keys[num_in_seq-1]
+            elif num_in_seq == 0:
+                high = keys[num_in_seq]
+                low = NEG_INF
+            else:
+                high = keys[num_in_seq]
+                low = keys[num_in_seq-1]
 
         for _ in range(snap_len):
-            self.snapshots.insert(num_in_seq, graph)
+            idx = np.random.uniform(low, high)
+            while idx == low:  # needs to repeat since in uniform(), low is inclusive
+                idx = np.random.uniform(low, high)
+
+            self.snapshots.update({idx: graph})
+            high = idx
 
     def add_snapshot(self, ebunch=None, graph=None, num_in_seq=None):
         """Add a snapshot with a bunch of edge values.
@@ -190,13 +212,11 @@ class SnapshotGraph(object):
             g.add_edges_from(ebunch)
         else:
             g = graph
+        if not num_in_seq:
+            num_in_seq = len(self.snapshots)
 
-        if (not num_in_seq) or (num_in_seq == len(self.snapshots) + 1):
-            self.snapshots.append(g)
-
-        elif num_in_seq > len(self.snapshots):
-            while num_in_seq > len(self.snapshots):
-                self.snapshots.append(g)
+        if num_in_seq > len(self.snapshots):
+            self.insert(g, snap_len=num_in_seq-len(self.snapshots)+1, num_in_seq=num_in_seq)
         else:
             self.insert(g, snap_len=1, num_in_seq=num_in_seq)
 
