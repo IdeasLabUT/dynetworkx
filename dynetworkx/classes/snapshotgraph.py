@@ -1,7 +1,7 @@
 from networkx.classes.graph import Graph
 import numpy as np
 from networkx import adjacency_matrix, from_numpy_array
-from sortedcontainers import SortedDict
+from sortedcontainers import SortedDict, SortedList
 
 NEG_INF = float(-10000000000)
 POS_INF = float(10000000000)
@@ -127,17 +127,15 @@ class SnapshotGraph(object):
 
         return iter(self.snapshots.values())
 
-    def insert(self, graph, snap_len=1, num_in_seq=None):
-        """Insert a graph into the snapshot graph, with options for inserting at a given index, with some snapshot length.
+    def insert(self, graph, start, end):
+        """Insert a graph into the snapshot graph, with specified intervals.
 
         Parameters
         ----------
         graph: networkx graph object
             A networkx graph to be inserted into snapshot graph.
-        snap_len: integer, optional (default= None)
-            Length of the snapshot.
-        num_in_seq: integer, optional (default= None)
-            Time slot to begin insertion at.
+        start: start of the interval, inclusive
+        end: end of the interval, exclusive
 
         Returns
         -------
@@ -148,45 +146,15 @@ class SnapshotGraph(object):
         >>> nxG1 = nx.Graph()
         >>> nxG1.add_edges_from([(1, 2), (1, 3)])
         >>> G = dnx.SnapshotGraph()
-        >>> G.insert(nxG1, 0)
+        >>> G.insert(nxG1, 0, 3)
 
         """
-        if not snap_len:
-            snap_len = 1
-
-        if not num_in_seq:
-            num_in_seq = len(self.snapshots)
-
-        if num_in_seq > len(self.snapshots):
-            raise ValueError(
-                'num_in_seq ({}) must be less than or equal to length of snapshot graph({})'.format(num_in_seq,
-                                                                                                    len(
-                                                                                                        self.snapshots)))
-        if len(self.snapshots) == 0:
-            high = POS_INF
-            low = NEG_INF
+        if start > end:
+            raise ValueError('Start of the interval must be lower or equal to end')
         else:
-            keys = self.snapshots.keys()
+            self.snapshots.update({(start, end): graph})
 
-            if num_in_seq == len(self.snapshots):
-                high = POS_INF
-                low = keys[num_in_seq-1]
-            elif num_in_seq == 0:
-                high = keys[num_in_seq]
-                low = NEG_INF
-            else:
-                high = keys[num_in_seq]
-                low = keys[num_in_seq-1]
-
-        for _ in range(snap_len):
-            idx = np.random.uniform(low, high)
-            while idx == low:  # needs to repeat since in uniform(), low is inclusive
-                idx = np.random.uniform(low, high)
-
-            self.snapshots.update({idx: graph})
-            high = idx
-
-    def add_snapshot(self, ebunch=None, graph=None, num_in_seq=None):
+    def add_snapshot(self, ebunch=None, graph=None, start=None, end=None):
         """Add a snapshot with a bunch of edge values.
 
         Parameters
@@ -213,15 +181,12 @@ class SnapshotGraph(object):
         else:
             g = graph
 
-        if not num_in_seq:
-            num_in_seq = len(self.snapshots)
-
-        if num_in_seq > len(self.snapshots):
-            self.insert(g, snap_len=num_in_seq-len(self.snapshots)+1, num_in_seq=num_in_seq)
+        if start is None or end is None:
+            raise ValueError('Start and end must both be specified.')
         else:
-            self.insert(g, snap_len=1, num_in_seq=num_in_seq)
+            self.insert(g, start, end)
 
-    def subgraph(self, nbunch, sbunch=None):
+    def subgraph(self, nbunch, sbunch=None, start=None, end=None): # TODO: have not finished
         """Return a snapshot graph containing only the nodes in bunch, and snapshot indexes in sbunch.
 
         Parameters
@@ -250,13 +215,12 @@ class SnapshotGraph(object):
         [(4, 6, {})]
         """
 
-        keys = self.snapshots.keys()
-        # only get the indexes wanted
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
-
+            graph_list = self.get(start=start, end=end)
         subgraph = SnapshotGraph()
 
         for snapshot in graph_list:
@@ -265,7 +229,7 @@ class SnapshotGraph(object):
 
         return subgraph
 
-    def degree(self, sbunch=None, nbunch=None, weight=None):
+    def degree(self, sbunch=None, nbunch=None, start=None, end=None, weight=None):
         """Return a list of tuples containing the degrees of each node in each snapshot
 
         Parameters
@@ -298,11 +262,12 @@ class SnapshotGraph(object):
         # returns a list of degrees for each graph snapshot in snapshots
         # use generator to create list of degrees
 
-        keys = self.snapshots.keys()
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return_degrees = []
 
@@ -315,7 +280,7 @@ class SnapshotGraph(object):
 
         return return_degrees
 
-    def number_of_nodes(self, sbunch=None):
+    def number_of_nodes(self, sbunch=None, start=None, end=None):
         """Gets number of nodes in each snapshot requested in 'sbunch'.
 
         Parameters
@@ -342,15 +307,16 @@ class SnapshotGraph(object):
         """
         # returns a list of the number of nodes in each graph in the range
 
-        keys = self.snapshots.keys()
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.number_of_nodes() for g in graph_list]
 
-    def order(self, sbunch=None):
+    def order(self, sbunch=None, start=None, end=None):
         """Returns order of each graph requested in 'sbunch'.
 
         Parameters
@@ -377,16 +343,16 @@ class SnapshotGraph(object):
         """
         # returns a list of the order of the graph in the range
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.order() for g in graph_list]
 
-    def has_node(self, n, sbunch=None):
+    def has_node(self, n, sbunch=None, start=None, end=None):
         """Gets boolean list of if a snapshot in 'sbunch' contains node 'n'.
 
         Parameters
@@ -414,16 +380,16 @@ class SnapshotGraph(object):
 
         """
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.has_node(n) for g in graph_list]
 
-    def is_multigraph(self, sbunch=None):
+    def is_multigraph(self, sbunch=None, start=None, end=None):
         """Returns a list of boolean values for if the graph at the index is a multigraph.
 
         Parameters
@@ -450,16 +416,16 @@ class SnapshotGraph(object):
 
         """
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.is_multigraph() for g in graph_list]
 
-    def is_directed(self, sbunch=None):
+    def is_directed(self, sbunch=None, start=None, end=None):
         """Returns a list of boolean values for if the graph at the index is a directed graph.
 
         Parameters
@@ -486,16 +452,16 @@ class SnapshotGraph(object):
 
         """
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.is_directed() for g in graph_list]
 
-    def to_directed(self, sbunch=None):
+    def to_directed(self, sbunch=None, start=None, end=None):
         """Returns a list of networkx directed graph objects.
 
         Parameters
@@ -520,16 +486,16 @@ class SnapshotGraph(object):
 
         """
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.to_directed() for g in graph_list]
 
-    def to_undirected(self, sbunch=None):
+    def to_undirected(self, sbunch=None, start=None, end=None, ):
         """Returns a list of networkx graph objects.
 
         Parameters
@@ -554,16 +520,16 @@ class SnapshotGraph(object):
 
         """
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.to_undirected() for g in graph_list]
 
-    def size(self, sbunch=None, weight=None):
+    def size(self, sbunch=None, start=None, end=None, weight=None):
         """Returns the size of each graph index as specified in sbunch as a list.
 
         Parameters
@@ -593,16 +559,16 @@ class SnapshotGraph(object):
 
         """
 
-        keys = self.snapshots.keys()
-
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         return [g.size(weight=weight) for g in graph_list]
 
-    def get(self, sbunch=None):
+    def get(self, sbunch=None, start=None, end=None):  # TODO: add examples
         """Returns a list of graphs specified in sbunch.
 
         Parameters
@@ -611,11 +577,12 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp
+        end: end timestamp
 
         Returns
         -------
-            graph_list : list
-                List of networkx graph objects.
+        List of networkx graph objects.
 
 
         Examples
@@ -627,18 +594,36 @@ class SnapshotGraph(object):
         [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>]
         >>> G.get()
         [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
-
         """
-        keys = self.snapshots.keys()
+        graphs = self.snapshots.values()
 
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
-        else:  # if sbunch is not specified, return all graphs as a list
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:  # if retrieve by indexes
+            return [graphs[index] for index in sbunch]
+        else:  # if retrieve by interval
+            if start is None:
+                min_idx = 0
+            else:
+                min_idx = self.snapshots.bisect_left((start,))
 
-        return graph_list
+                # Decrease 1 index if start is in the middle of an interval
+                # Eg: if Keys = [(2,5)(5,6)], start=3 won't retrieve (2,5) as we want,
+                # therefore, decrease 1 index to include (2,5). If start=5, then we won't need to change
+                if min_idx > 0 and start < self.snapshots.keys()[min_idx][0]:
+                    min_idx -= 1
 
-    def add_nodes_from(self, nbunch, sbunch=None, **attrs):
+                if min_idx == len(self.snapshots):
+                    return iter(())
+
+            if end is None:
+                max_idx = len(self.snapshots)
+            else:
+                max_idx = self.snapshots.bisect_left((end,))
+
+            return graphs[min_idx: max_idx]
+
+    def add_nodes_from(self, nbunch, sbunch=None, start=None, end=None, **attrs):
         """Adds nodes to snapshots in sbunch.
 
         Parameters
@@ -679,17 +664,18 @@ class SnapshotGraph(object):
          [0 0 0 0 0 0 0]]
 
         """
-        keys = self.snapshots.keys()
 
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         for g in graph_list:
             g.add_nodes_from(nbunch, **attrs)
 
-    def add_edges_from(self, ebunch, sbunch=None, **attrs):
+    def add_edges_from(self, ebunch, sbunch=None, start=None, end=None, **attrs):
         """Adds edges to snapshots in sbunch.
 
         Parameters
@@ -734,12 +720,13 @@ class SnapshotGraph(object):
          [0 0 0 0 0 1 0]]
 
         """
-        keys = self.snapshots.keys()
 
-        if sbunch:
-            graph_list = [self.snapshots[keys[index]] for index in sbunch]
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self.get(sbunch=sbunch)
         else:
-            graph_list = [self.snapshots[keys[index]] for index in range(len(self.snapshots))]
+            graph_list = self.get(start=start, end=end)
 
         for g in graph_list:
             g.add_edges_from(ebunch, **attrs)
@@ -831,7 +818,7 @@ class SnapshotGraph(object):
 
                 file.write(line)
 
-    def compute_network_statistic(self, nx_statistic_function, begin=None, end=None, **kwargs):
+    def compute_network_statistic(self, nx_statistic_function, start=None, end=None, **kwargs):
         """Compute networkx statistics on each snapshot.
 
         Parameters
@@ -853,7 +840,17 @@ class SnapshotGraph(object):
         >>> G.compute_network_statistic(nx.algorithms.centrality.degree_centrality)
         """
 
+        # if sbunch and (start or end):
+        #     raise ValueError('Either sbunch or (start and end) can be specified.')
+        # elif sbunch:
+        #     graph_list = self.get(sbunch=sbunch)
+        # else:
+        #     graph_list = self.get(start=start, end=end)
+
         output = []
-        for graph in self.snapshots.values()[begin:end]:
+        for graph in self.snapshots.values()[start:end]:
             output.append(nx_statistic_function(graph, **kwargs))
         return output
+
+    def get_missing_intervals(self):
+        pass
