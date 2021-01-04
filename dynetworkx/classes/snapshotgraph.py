@@ -2,9 +2,7 @@ from networkx.classes.graph import Graph
 import numpy as np
 from networkx import adjacency_matrix, from_numpy_array
 from sortedcontainers import SortedDict, SortedList
-
-NEG_INF = float(-10000000000)
-POS_INF = float(10000000000)
+import copy
 
 
 class SnapshotGraph(object):
@@ -15,9 +13,9 @@ class SnapshotGraph(object):
 
     @property
     def name(self):
-        """String identifier of the interval graph.
+        """String identifier of the snapshot graph.
 
-        This interval graph attribute appears in the attribute dict SnapshotGraph.graph
+        This snapshot graph attribute appears in the attribute dict SnapshotGraph.graph
         keyed by the string `"name"`. as well as an attribute (technically
         a property) `SnapshotGraph.name`. This is entirely user controlled.
         """
@@ -163,8 +161,8 @@ class SnapshotGraph(object):
             Each edge in the ebunch list will be included to all added graphs.
         graph : networkx graph object, optional (default= None)
             networkx graph to be inserted into snapshot graph.
-        num_in_seq : integer, optional (default= None)
-            Time slot to begin insertion at.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -173,7 +171,7 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=0, end=3)
         """
         if not graph:
             g = Graph()
@@ -186,7 +184,7 @@ class SnapshotGraph(object):
         else:
             self.insert(g, start, end)
 
-    def subgraph(self, nbunch, sbunch=None, start=None, end=None): # TODO: have not finished
+    def subgraph(self, nbunch, sbunch=None, start=None, end=None):
         """Return a snapshot graph containing only the nodes in bunch, and snapshot indexes in sbunch.
 
         Parameters
@@ -197,6 +195,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of subgraphs. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -218,13 +218,14 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end, include_interval=True)
+
         subgraph = SnapshotGraph()
 
-        for snapshot in graph_list:
-            subgraph.add_snapshot(graph=snapshot.subgraph(nbunch))
+        for key, snapshot in graph_list:
+            subgraph.add_snapshot(graph=snapshot.subgraph(nbunch), start=key[0], end=key[1])
         subgraph.graph = self.graph
 
         return subgraph
@@ -241,8 +242,11 @@ class SnapshotGraph(object):
         nbunch : container of nodes, optional (default= None)
             Each node in the nbunch list will be included in the returned list of
             node degrees.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
         weight : string, optional (default= None)
-            The edge attribute that holds the numerical value used as a weight. If None, then each edge has weight 1. The degree is the sum of the edge weights adjacent to the node.
+            The edge attribute that holds the numerical value used as a weight. If None, then each edge has weight 1.
+            The degree is the sum of the edge weights adjacent to the node.
 
         Returns
         -------
@@ -265,9 +269,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return_degrees = []
 
@@ -289,6 +293,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of number of nodes in the snapshot. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -310,9 +316,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.number_of_nodes() for g in graph_list]
 
@@ -325,6 +331,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of node orders. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -346,9 +354,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.order() for g in graph_list]
 
@@ -363,6 +371,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of if the snapshot graph includes the node. It is highly recommended
             that this list is sequential, however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -383,9 +393,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.has_node(n) for g in graph_list]
 
@@ -398,6 +408,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of booleans. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -419,9 +431,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.is_multigraph() for g in graph_list]
 
@@ -434,6 +446,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of booleans. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -455,9 +469,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.is_directed() for g in graph_list]
 
@@ -470,6 +484,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of directed graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -489,9 +505,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.to_directed() for g in graph_list]
 
@@ -504,6 +520,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of undirected graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -523,9 +541,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.to_undirected() for g in graph_list]
 
@@ -538,6 +556,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of sizes. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
         weight : string, optional (default=None)
             The edge attribute that holds the numerical value used as a weight.
             If None, then each edge has weight 1.
@@ -562,14 +582,14 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end)
 
         return [g.size(weight=weight) for g in graph_list]
 
-    def get(self, sbunch=None, start=None, end=None):  # TODO: add examples
-        """Returns a list of graphs specified in sbunch.
+    def _get(self, sbunch=None, start=None, end=None, include_interval=False, split_overlaps=False):
+        """Returns a list of graphs specified in sbunch. Hidden utility tool for other functions.
 
         Parameters
         ----------
@@ -577,8 +597,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of graphs. It is highly recommended that this list is sequential,
             however it can be out of order.
-        start: start timestamp
-        end: end timestamp
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -588,14 +608,20 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
-        >>> G.get(sbunch=[0])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
+        >>> G._get(sbunch=[0])
         [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>]
-        >>> G.get()
+        >>> G._get()
+        [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
+        >>> G._get(start=2, end=6)
         [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
         """
-        graphs = self.snapshots.values()
+
+        if include_interval:
+            graphs = self.snapshots.items()
+        else:
+            graphs = self.snapshots.values()
 
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
@@ -611,7 +637,13 @@ class SnapshotGraph(object):
                 # Eg: if Keys = [(2,5)(5,6)], start=3 won't retrieve (2,5) as we want,
                 # therefore, decrease 1 index to include (2,5). If start=5, then we won't need to change
                 if min_idx > 0 and start < self.snapshots.keys()[min_idx][0]:
-                    min_idx -= 1
+                    if split_overlaps:
+                        # Eg: if Keys = [(2,5)(5,6)] and start=3, split (2,5) into (2,3) and (3,5)
+                        key, g = self.snapshots.popitem(min_idx - 1)
+                        self.insert(g, key[0], start)
+                        self.insert(copy.deepcopy(g), start, key[1])
+                    else:
+                        min_idx -= 1
 
                 if min_idx == len(self.snapshots):
                     return iter(())
@@ -620,8 +652,46 @@ class SnapshotGraph(object):
                 max_idx = len(self.snapshots)
             else:
                 max_idx = self.snapshots.bisect_left((end,))
+                # Split the snapshot if 'end' is in the middle of an interval
+                # Eg: if Keys = [(2,5)(5,9)] and end=7, split (5,9) into (5,7) and (7,9)
+                if split_overlaps and max_idx < len(self.snapshots) and end < self.snapshots.keys()[max_idx][1]:
+                    key, g = self.snapshots.popitem(max_idx)
+                    self.insert(g, key[0], end)
+                    self.insert(copy.deepcopy(g), end, key[1])
 
             return graphs[min_idx: max_idx]
+
+    def get(self, sbunch=None, start=None, end=None):
+        """Returns a list of graphs specified in sbunch. Interface function for users.
+
+        Parameters
+        ----------
+        sbunch : container of snapshot indexes, optional (default= None)
+            Each snapshot index in this list will be included in the returned list
+            of graphs. It is highly recommended that this list is sequential,
+            however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
+
+        Returns
+        -------
+        List of networkx graph objects.
+
+
+        Examples
+        --------
+        >>> G = dnx.SnapshotGraph()
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
+        >>> G._get(sbunch=[0])
+        [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>]
+        >>> G._get()
+        [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
+        >>> G._get(start=2, end=6)
+        [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
+        """
+
+        return self._get(sbunch, start, end)
 
     def add_nodes_from(self, nbunch, sbunch=None, start=None, end=None, **attrs):
         """Adds nodes to snapshots in sbunch.
@@ -634,6 +704,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of node degrees. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -664,13 +736,13 @@ class SnapshotGraph(object):
          [0 0 0 0 0 0 0]]
 
         """
-
+        
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end, split_overlaps=True)
 
         for g in graph_list:
             g.add_nodes_from(nbunch, **attrs)
@@ -686,6 +758,8 @@ class SnapshotGraph(object):
             Each snapshot index in this list will be included in the returned list
             of node degrees. It is highly recommended that this list is sequential,
             however it can be out of order.
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
 
         Returns
         -------
@@ -724,15 +798,15 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self.get(sbunch=sbunch)
+            graph_list = self._get(sbunch=sbunch)
         else:
-            graph_list = self.get(start=start, end=end)
+            graph_list = self._get(start=start, end=end, split_overlaps=True)
 
         for g in graph_list:
             g.add_edges_from(ebunch, **attrs)
 
     @staticmethod
-    def load_from_txt(path, delimiter=";", comments="#"):
+    def load_from_txt(path, delimiter=";", comments="#", start='start', end='end'):
         """Read snapshot graph in from path.
            Every line in the file must be an adjacency matrix, with rows separated by delimiter.
 
@@ -743,6 +817,12 @@ class SnapshotGraph(object):
 
         comments : string, optional
            Marker for comment lines
+
+        start: string, optional
+            Marker for start timestamps
+
+        end: string, optional
+            Marker for end timestamps
 
         delimiter : string, optional
            Separator for rows in matrix.  The default is ;. Cannot be whitespace or \n.
@@ -769,17 +849,37 @@ class SnapshotGraph(object):
                     line = line[:p]
                 if not len(line):
                     continue
-                line = line.strip()
+
+                p = min(line.find(start), line.find(end))
+                interval = [None, None]
+
+                for item in line[p:].split():
+                    key, value = item.split('=')
+
+                    try:
+                        value = float(value)
+                    except:
+                        raise ValueError('Value of "{}" must be float.'.format(key))
+
+                    if key == start:
+                        interval[0] = value
+                    else:
+                        interval[1] = value
+
+                if interval[0] is None or interval[1] is None:
+                    raise ValueError('A snapshot does not include its interval')
+
+                line = line[:p].strip()
                 matrix = []
                 for row in line.split(delimiter):
                     matrix.append(row.split(' '))
 
                 g = from_numpy_array(np.array(matrix))
-                sg.insert(g)
+                sg.insert(g, start=interval[0], end=interval[1])
 
         return sg
 
-    def save_to_txt(self, path, delimiter=";"):
+    def save_to_txt(self, path, delimiter=";", start='start', end='end'):
         """Write snapshot graph to path.
            Every line in the file will be an adjacency matrix.
 
@@ -787,6 +887,12 @@ class SnapshotGraph(object):
         ----------
         path : string or file
            Filename to write.
+
+        start: string, optional
+            Marker for start timestamps
+
+        end: string, optional
+            Marker for end timestamps
 
         delimiter : string, optional
            Separator for rows in matrix.  The default is ;. Cannot be whitespace or \n.
@@ -802,36 +908,24 @@ class SnapshotGraph(object):
         if delimiter == ' ' or delimiter == '\n':
             raise ValueError("Delimiter cannot be " + delimiter + ".")
 
-        nodelist = set()
         with open(path, 'w') as file:
-
-            for graph in self.get():
-                for node in graph.nodes():
-                    nodelist.add(node)
-
-            for graph in self.get():
-                for node in nodelist:
-                    if node not in graph.nodes():
-                        graph.add_node(node)
+            for interval, graph in self._get(include_interval=True):
                 m = adjacency_matrix(graph).todense()
-                line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m, dtype=str)) + '\n'
+                line = delimiter.join(' '.join(x for x in y) for y in np.asarray(m, dtype=str)) + ' ' + start + '=' +\
+                    str(interval[0]) + ' ' + end + '=' + str(interval[1]) + '\n'
 
                 file.write(line)
 
-    def compute_network_statistic(self, nx_statistic_function, start=None, end=None, **kwargs):
+    def compute_network_statistic(self, nx_statistic_function, sbunch=None, start=None, end=None, **kwargs):
         """Compute networkx statistics on each snapshot.
 
         Parameters
         ----------
         nx_statistic_function : function from networkx.algorithms
            Statistic function to calculate.
-
-        begin : int, optional (default= None)
-           Number of snapshot to begin calculation
-
-        end : int, optional (default= None)
-           Number of snapshot to end calculation
-
+        sbunch: snapshots indices to compute statistic
+        start: start timestamp, inclusive
+        end: end timestamp, exclusive
         kwargs : optional
            inputs for nx_statistic_function
 
@@ -840,17 +934,14 @@ class SnapshotGraph(object):
         >>> G.compute_network_statistic(nx.algorithms.centrality.degree_centrality)
         """
 
-        # if sbunch and (start or end):
-        #     raise ValueError('Either sbunch or (start and end) can be specified.')
-        # elif sbunch:
-        #     graph_list = self.get(sbunch=sbunch)
-        # else:
-        #     graph_list = self.get(start=start, end=end)
+        if sbunch and (start or end):
+            raise ValueError('Either sbunch or (start and end) can be specified.')
+        elif sbunch:
+            graph_list = self._get(sbunch=sbunch)
+        else:
+            graph_list = self._get(start=start, end=end)
 
         output = []
-        for graph in self.snapshots.values()[start:end]:
+        for graph in graph_list:
             output.append(nx_statistic_function(graph, **kwargs))
         return output
-
-    def get_missing_intervals(self):
-        pass

@@ -80,12 +80,11 @@ def test_snapshotgraph_insert(): # TODO: need to fix assert
     assert list(G.snapshots.values()) == [nxG1]
 
     G.insert(nxG1, start=3, end=10)
+    G.insert(nxG1, start=10, end=15)
+    G.insert(nxG2, start=15, end=17)
 
-    assert list(G.snapshots.values()) == [nxG1, nxG1, nxG1]
-
-    G.insert(nxG2, start=10, end=12)
-
-    assert list(G.snapshots.values()) == [nxG1, nxG2, nxG2, nxG2, nxG1, nxG1]
+    assert list(G.snapshots.values()) == [nxG1, nxG1, nxG1, nxG2]
+    assert list(G.snapshots.keys()) == [(0, 3), (3, 10), (10, 15), (15, 17)]
 
 
 def test_snapshotgraph_add_snapshot():
@@ -180,6 +179,32 @@ def test_snapshotgraph_size():
     assert G.size() == [2, 2]
 
 
+def test_snapshotgraph__get():
+    G = dnx.SnapshotGraph()
+    nxG1 = nx.Graph()
+    nxG2 = nx.Graph()
+    nxG1.add_edges_from([(1, 2), (1, 3)])
+    nxG2.add_edges_from([(1, 4), (1, 3)])
+    G.add_snapshot(graph=nxG1, start=0, end=3)
+    G.add_snapshot(graph=nxG2, start=3, end=10)
+
+    # query by index
+    assert G._get(sbunch=[0]) == [nxG1]
+    assert G._get(sbunch=[1]) == [nxG2]
+    assert G._get() == [nxG1, nxG2]
+
+    # query by interval
+    assert G._get(start=1, end=3) == [nxG1]
+    assert G._get(start=2, end=6) == [nxG1, nxG2]
+    assert G._get() == [nxG1, nxG2]
+
+    # include interval
+    assert G._get(start=1, end=5, include_interval=True) == [((0, 3), nxG1), ((3, 10), nxG2)]
+
+    # split overlaps
+    assert G._get(start=1, end=3, split_overlaps=True)[0].nodes() == nxG1.nodes()
+
+
 def test_snapshotgraph_get():
     G = dnx.SnapshotGraph()
     nxG1 = nx.Graph()
@@ -190,7 +215,7 @@ def test_snapshotgraph_get():
     G.add_snapshot(graph=nxG2, start=3, end=10)
 
     assert G.get([0]) == [nxG1]
-    assert G.get([1]) == [nxG2]
+    assert G._get(start=2, end=6) == [nxG1, nxG2]
     assert G.get() == [nxG1, nxG2]
 
 
@@ -207,8 +232,8 @@ def test_snapshotgraph_add_nodes_from():
 
 def test_snapshotgraph_add_edges_from():
     G = dnx.SnapshotGraph()
-    G.add_snapshot([(1, 2), (1, 3)])
-    G.add_snapshot([(1, 4), (1, 3)])
+    G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+    G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
     G.add_edges_from([(5, 6), (7, 6)], [0])
     G.add_edges_from([(8, 9), (10, 11)], [0, 1])
 
@@ -221,12 +246,13 @@ def test_snapshotgraph_load_from_text_default():
     desired = dnx.SnapshotGraph()
     desired.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
 
     actual = dnx.SnapshotGraph.load_from_txt(path)
 
     for i in range(max(len(actual.get()), len(desired.get()))):
         assert list(desired.get()[i].edges(data=True)) == list(desired.get()[i].edges(data=True))
+    assert list(desired.snapshots.keys()) == list(actual.snapshots.keys())
 
 
 def test_snapshotgraph_load_from_text_delimiter():
@@ -234,12 +260,13 @@ def test_snapshotgraph_load_from_text_delimiter():
     desired = dnx.SnapshotGraph()
     desired.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
 
     actual = dnx.SnapshotGraph.load_from_txt(path, delimiter='|')
 
     for i in range(max(len(actual.get()), len(desired.get()))):
         assert list(desired.get()[i].edges(data=True)) == list(desired.get()[i].edges(data=True))
+    assert list(desired.snapshots.keys()) == list(actual.snapshots.keys())
 
 
 def test_snapshotgraph_load_from_text_comments():
@@ -247,12 +274,13 @@ def test_snapshotgraph_load_from_text_comments():
     desired = dnx.SnapshotGraph()
     desired.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
 
     actual = dnx.SnapshotGraph.load_from_txt(path, comments='@')
 
     for i in range(max(len(actual.get()), len(desired.get()))):
         assert list(desired.get()[i].edges(data=True)) == list(desired.get()[i].edges(data=True))
+    assert list(desired.snapshots.keys()) == list(actual.snapshots.keys())
 
 
 def test_snapshotgraph_load_from_text_multi():
@@ -260,15 +288,16 @@ def test_snapshotgraph_load_from_text_multi():
     desired = dnx.SnapshotGraph()
     desired.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
     desired.insert(from_numpy_matrix(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=3, end=10)
 
     actual = dnx.SnapshotGraph.load_from_txt(path)
 
     for i in range(max(len(actual.get()), len(desired.get()))):
         assert list(desired.get()[i].edges(data=True)) == list(desired.get()[i].edges(data=True))
+    assert list(desired.snapshots.keys()) == list(actual.snapshots.keys())
 
 
 def test_snapshotgraph_save_to_text_default():
@@ -278,10 +307,10 @@ def test_snapshotgraph_save_to_text_default():
     G = dnx.SnapshotGraph()
     G.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
     G.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=3, end=10)
 
     G.save_to_txt(output_path)
 
@@ -300,10 +329,10 @@ def test_snapshotgraph_save_to_text_delimiter():
     G = dnx.SnapshotGraph()
     G.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
     G.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
-                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])))
+                  [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=3, end=10)
 
     G.save_to_txt(output_path, delimiter='|')
 
@@ -324,9 +353,9 @@ def test_snapshotgraph_compute_network_statistic():
     g1.add_edges_from([(1, 2), (3, 4)])
     g2.add_edges_from([(1, 2), (3, 4), (5, 6)])
     g3.add_edges_from([(1, 2), (2, 3), (3, 4)])
-    sg.insert(g1)
-    sg.insert(g2)
-    sg.insert(g3)
+    sg.insert(g1, start=0, end=3)
+    sg.insert(g2, start=3, end=10)
+    sg.insert(g3, start=10, end=15)
 
     assert sg.compute_network_statistic(nx.algorithms.centrality.degree_centrality) == [
         nx.algorithms.centrality.degree_centrality(g1),
