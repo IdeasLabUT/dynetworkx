@@ -189,20 +189,20 @@ def test_snapshotgraph__get():
     G.add_snapshot(graph=nxG2, start=3, end=10)
 
     # query by index
-    assert G._get(sbunch=[0]) == [nxG1]
-    assert G._get(sbunch=[1]) == [nxG2]
-    assert G._get() == [nxG1, nxG2]
+    assert [snapshot for snapshot in G._get(sbunch=[0])] == [nxG1]
+    assert [snapshot for snapshot in G._get(sbunch=[1])] == [nxG2]
+    assert [snapshot for snapshot in G._get()] == [nxG1, nxG2]
 
     # query by interval
-    assert G._get(start=1, end=3) == [nxG1]
-    assert G._get(start=2, end=6) == [nxG1, nxG2]
-    assert G._get() == [nxG1, nxG2]
+    assert [snapshot for snapshot in G._get(start=1, end=3)] == [nxG1]
+    assert [snapshot for snapshot in G._get(start=2, end=6)] == [nxG1, nxG2]
+    assert [snapshot for snapshot in G._get()] == [nxG1, nxG2]
 
     # include interval
-    assert G._get(start=1, end=5, include_interval=True) == [((0, 3), nxG1), ((3, 10), nxG2)]
+    assert [snapshot for snapshot in G._get(start=1, end=5, include_interval=True)] == [((0, 3), nxG1), ((3, 10), nxG2)]
 
     # split overlaps
-    assert G._get(start=1, end=3, split_overlaps=True)[0].nodes() == nxG1.nodes()
+    assert [snapshot for snapshot in G._get(start=1, end=3, split_overlaps=True)][0].nodes() == nxG1.nodes()
 
 
 def test_snapshotgraph_get():
@@ -215,7 +215,7 @@ def test_snapshotgraph_get():
     G.add_snapshot(graph=nxG2, start=3, end=10)
 
     assert G.get([0]) == [nxG1]
-    assert G._get(start=2, end=6) == [nxG1, nxG2]
+    assert G.get(start=2, end=6) == [nxG1, nxG2]
     assert G.get() == [nxG1, nxG2]
 
 

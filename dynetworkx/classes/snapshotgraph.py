@@ -215,18 +215,17 @@ class SnapshotGraph(object):
         [(4, 6, {})]
         """
 
+        subgraph = SnapshotGraph()
+        subgraph.graph = self.graph
+
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            for key, snapshot in self._get(sbunch=sbunch):
+                subgraph.add_snapshot(graph=snapshot.subgraph(nbunch), start=key[0], end=key[1])
         else:
-            graph_list = self._get(start=start, end=end, include_interval=True)
-
-        subgraph = SnapshotGraph()
-
-        for key, snapshot in graph_list:
-            subgraph.add_snapshot(graph=snapshot.subgraph(nbunch), start=key[0], end=key[1])
-        subgraph.graph = self.graph
+            for key, snapshot in self._get(start=start, end=end, include_interval=True):
+                subgraph.add_snapshot(graph=snapshot.subgraph(nbunch), start=key[0], end=key[1])
 
         return subgraph
 
@@ -269,20 +268,15 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            if nbunch:
+                return [graph.degree(nbunch, weight=weight) for graph in self._get(sbunch=sbunch)]
+            else:
+                return [graph.degree(graph, weight=weight) for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return_degrees = []
-
-        if nbunch:
-            for g in graph_list:
-                return_degrees.append(g.degree(nbunch, weight=weight))
-        else:
-            for g in graph_list:
-                return_degrees.append(g.degree(g, weight=weight))
-
-        return return_degrees
+            if nbunch:
+                return [graph.degree(nbunch, weight=weight) for graph in self._get(start=start, end=end)]
+            else:
+                return [graph.degree(graph, weight=weight) for graph in self._get(start=start, end=end)]
 
     def number_of_nodes(self, sbunch=None, start=None, end=None):
         """Gets number of nodes in each snapshot requested in 'sbunch'.
@@ -316,11 +310,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.number_of_nodes() for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.number_of_nodes() for g in graph_list]
+            return [graph.number_of_nodes() for graph in self._get(start=start, end=end)]
 
     def order(self, sbunch=None, start=None, end=None):
         """Returns order of each graph requested in 'sbunch'.
@@ -354,11 +346,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.order() for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.order() for g in graph_list]
+            return [g.order() for g in self._get(start=start, end=end)]
 
     def has_node(self, n, sbunch=None, start=None, end=None):
         """Gets boolean list of if a snapshot in 'sbunch' contains node 'n'.
@@ -393,11 +383,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.has_node(n) for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.has_node(n) for g in graph_list]
+            return [graph.has_node(n) for graph in self._get(start=start, end=end)]
 
     def is_multigraph(self, sbunch=None, start=None, end=None):
         """Returns a list of boolean values for if the graph at the index is a multigraph.
@@ -431,11 +419,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.is_multigraph() for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.is_multigraph() for g in graph_list]
+            return [graph.is_multigraph() for graph in self._get(start=start, end=end)]
 
     def is_directed(self, sbunch=None, start=None, end=None):
         """Returns a list of boolean values for if the graph at the index is a directed graph.
@@ -469,11 +455,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.is_directed() for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.is_directed() for g in graph_list]
+            return [graph.is_directed() for graph in self._get(start=start, end=end)]
 
     def to_directed(self, sbunch=None, start=None, end=None):
         """Returns a list of networkx directed graph objects.
@@ -505,11 +489,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.to_directed() for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.to_directed() for g in graph_list]
+            return [graph.to_directed() for graph in self._get(start=start, end=end)]
 
     def to_undirected(self, sbunch=None, start=None, end=None, ):
         """Returns a list of networkx graph objects.
@@ -541,11 +523,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.to_undirected() for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.to_undirected() for g in graph_list]
+            return [graph.to_undirected() for graph in self._get(start=start, end=end)]
 
     def size(self, sbunch=None, start=None, end=None, weight=None):
         """Returns the size of each graph index as specified in sbunch as a list.
@@ -582,11 +562,9 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [graph.size(weight=weight) for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        return [g.size(weight=weight) for g in graph_list]
+            return [graph.size(weight=weight) for graph in self._get(start=start, end=end)]
 
     def _get(self, sbunch=None, start=None, end=None, include_interval=False, split_overlaps=False):
         """Returns a list of graphs specified in sbunch. Hidden utility tool for other functions.
@@ -626,7 +604,8 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:  # if retrieve by indexes
-            return [graphs[index] for index in sbunch]
+            for index in sbunch:
+                yield graphs[index]
         else:  # if retrieve by interval
             if start is None:
                 min_idx = 0
@@ -645,9 +624,6 @@ class SnapshotGraph(object):
                     else:
                         min_idx -= 1
 
-                if min_idx == len(self.snapshots):
-                    return iter(())
-
             if end is None:
                 max_idx = len(self.snapshots)
             else:
@@ -659,7 +635,8 @@ class SnapshotGraph(object):
                     self.insert(g, key[0], end)
                     self.insert(copy.deepcopy(g), end, key[1])
 
-            return graphs[min_idx: max_idx]
+            for graph in graphs[min_idx: max_idx]:
+                yield graph
 
     def get(self, sbunch=None, start=None, end=None):
         """Returns a list of graphs specified in sbunch. Interface function for users.
@@ -691,7 +668,7 @@ class SnapshotGraph(object):
         [<networkx.classes.graph.Graph object at 0x7f27f5bd39b0>, <networkx.classes.graph.Graph object at 0x7f27f5bd3d30>]
         """
 
-        return self._get(sbunch, start, end)
+        return [snapshot for snapshot in self._get(sbunch, start, end)]
 
     def add_nodes_from(self, nbunch, sbunch=None, start=None, end=None, **attrs):
         """Adds nodes to snapshots in sbunch.
@@ -740,12 +717,11 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            for graph in self._get(sbunch=sbunch):
+                graph.add_nodes_from(nbunch, **attrs)
         else:
-            graph_list = self._get(start=start, end=end, split_overlaps=True)
-
-        for g in graph_list:
-            g.add_nodes_from(nbunch, **attrs)
+            for graph in self._get(start=start, end=end, split_overlaps=True):
+                graph.add_nodes_from(nbunch, **attrs)
 
     def add_edges_from(self, ebunch, sbunch=None, start=None, end=None, **attrs):
         """Adds edges to snapshots in sbunch.
@@ -798,12 +774,11 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            for graph in self._get(sbunch=sbunch):
+                graph.add_edges_from(ebunch, **attrs)
         else:
-            graph_list = self._get(start=start, end=end, split_overlaps=True)
-
-        for g in graph_list:
-            g.add_edges_from(ebunch, **attrs)
+            for graph in self._get(start=start, end=end, split_overlaps=True):
+                graph.add_edges_from(ebunch, **attrs)
 
     @staticmethod
     def load_from_txt(path, delimiter=";", comments="#", start='start', end='end'):
@@ -937,11 +912,6 @@ class SnapshotGraph(object):
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
-            graph_list = self._get(sbunch=sbunch)
+            return [nx_statistic_function(graph, **kwargs) for graph in self._get(sbunch=sbunch)]
         else:
-            graph_list = self._get(start=start, end=end)
-
-        output = []
-        for graph in graph_list:
-            output.append(nx_statistic_function(graph, **kwargs))
-        return output
+            return [nx_statistic_function(graph, **kwargs) for graph in self._get(start=start, end=end)]
