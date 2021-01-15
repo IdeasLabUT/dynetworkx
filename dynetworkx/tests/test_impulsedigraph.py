@@ -1,5 +1,3 @@
-from intervaltree import Interval
-
 import dynetworkx as dnx
 import networkx as nx
 

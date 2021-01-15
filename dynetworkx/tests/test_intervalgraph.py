@@ -1,6 +1,5 @@
 import dynetworkx as dnx
 import networkx as nx
-from intervaltree import Interval
 from networkx import from_numpy_matrix, from_numpy_array
 import os
 import numpy as np
@@ -153,8 +152,7 @@ def test_intervalgraph_add_edge():
     G.add_edge(1, 2, 3, 4)
     G.add_edge(1, 3, 4, 5, weight=7, capacity=15, length=342.7)
 
-    assert list(G.edges(data=True)) == [(Interval(4, 5, (1, 3)), {'capacity': 15, 'length': 342.7, 'weight': 7}),
-                                        (Interval(3, 4, (1, 2)), {})]
+    assert list(G.edges(data=True)) == [ ((1, 2, 3, 4), {}), ((1, 3, 4, 5), {'capacity': 15, 'length': 342.7, 'weight': 7})]
 
 
 def test_intervalgraph_add_edges_from():
@@ -162,10 +160,8 @@ def test_intervalgraph_add_edges_from():
     G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12)])
     G.add_edges_from([(3, 4, 19, 20), (1, 4, 3, 4)], label='WN2898')
 
-    assert list(G.edges(data=True)) == [(Interval(19, 20, (3, 4)), {'label': 'WN2898'}),
-                                        (Interval(11, 12, (2, 4)), {}),
-                                        (Interval(10, 11, (1, 2)), {}),
-                                        (Interval(3, 4, (1, 4)), {'label': 'WN2898'})]
+    assert list(G.edges(data=True)) == [((1, 4, 3, 4), {'label': 'WN2898'}), ((1, 2, 10, 11), {}),
+                                        ((2, 4, 11, 12), {}), ((3, 4, 19, 20), {'label': 'WN2898'})]
 
 
 def test_intervalgraph_has_edge():
@@ -181,22 +177,21 @@ def test_intervalgraph_edges_default():
     G = dnx.IntervalGraph()
     G.add_edge(3, 4, 5, 6)
 
-    assert list(G.edges()) == [Interval(5, 6, (3, 4))]
+    assert list(G.edges()) == [(3, 4, 5, 6)]
 
 
 def test_intervalgraph_edges_slice():
     G = dnx.IntervalGraph()
     G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])
 
-    assert list(G.edges(begin=10)) == [Interval(10, 11, (1, 2)), Interval(19, 20, (6, 4)),
-                                       Interval(11, 12, (2, 4)), Interval(15, 16, (2, 4))]
-    assert list(G.edges(end=11)) == [Interval(10, 11, (1, 2))]
-    assert list(G.edges(begin=11, end=15)) == [Interval(11, 12, (2, 4))]
-    assert list(G.edges(u=2)) == [Interval(10, 11, (1, 2)), Interval(11, 12, (2, 4)), Interval(15, 16, (2, 4))]
-    assert list(G.edges(v=2)) == [Interval(10, 11, (1, 2)), Interval(11, 12, (2, 4)), Interval(15, 16, (2, 4))]
-    assert list(G.edges(u=2, begin=11)) == [Interval(11, 12, (2, 4)), Interval(15, 16, (2, 4))]
-    assert list(G.edges(u=2, v=4, end=12)) == [Interval(11, 12, (2, 4))]
-    assert list(G.edges(u=1, v=2)) == [Interval(10, 11, (1, 2))]
+    assert list(G.edges(begin=10)) == [(1, 2, 10, 11), (2, 4, 11, 12), (2, 4, 15, 16), (6, 4, 19, 20)]
+    assert list(G.edges(end=11)) == [(1, 2, 10, 11)]
+    assert list(G.edges(begin=11, end=15)) == [(2, 4, 11, 12)]
+    assert list(G.edges(u=2)) == [(1, 2, 10, 11), (2, 4, 11, 12), (2, 4, 15, 16)]
+    assert list(G.edges(v=2)) == [(1, 2, 10, 11), (2, 4, 11, 12), (2, 4, 15, 16)]
+    assert list(G.edges(u=2, begin=11)) == [(2, 4, 11, 12), (2, 4, 15, 16)]
+    assert list(G.edges(u=2, v=4, end=12)) == [(2, 4, 11, 12)]
+    assert list(G.edges(u=1, v=2)) == [(1, 2, 10, 11)]
 
 
 def test_intervalgraph_edges_data():
@@ -205,16 +200,11 @@ def test_intervalgraph_edges_data():
     G.add_edge(1, 2, 10, 11, weight=10)
     G.add_edge(2, 6, 10, 11)
 
-    assert list(G.edges(data="weight")) == [(Interval(4, 5, (1, 3)), 8),
-                                            (Interval(10, 11, (2, 6)), None),
-                                            (Interval(10, 11, (1, 2)), 10)]
-    assert list(G.edges(data="weight", default=5)) == [(Interval(4, 5, (1, 3)), 8),
-                                                       (Interval(10, 11, (2, 6)), 5),
-                                                       (Interval(10, 11, (1, 2)), 10)]
-    assert list(G.edges(data=True)) == [(Interval(4, 5, (1, 3)), {'weight': 8, 'height': 18}),
-                                        (Interval(10, 11, (2, 6)), {}),
-                                        (Interval(10, 11, (1, 2)), {'weight': 10})]
-    assert list(G.edges(u=1, begin=2, end=9, data="weight")) == [(Interval(4, 5, (1, 3)), 8)]
+    assert list(G.edges(data="weight")) == [((1, 3, 4, 5), 8), ((1, 2, 10, 11), 10), ((2, 6, 10, 11), None)]
+    assert list(G.edges(data="weight", default=5)) == [((1, 3, 4, 5), 8), ((1, 2, 10, 11), 10), ((2, 6, 10, 11), 5)]
+    assert list(G.edges(data=True)) == [((1, 3, 4, 5), {'weight': 8, 'height': 18}),
+                                        ((1, 2, 10, 11), {'weight': 10}), ((2, 6, 10, 11), {})]
+    assert list(G.edges(u=1, begin=2, end=9, data="weight")) == [((1, 3, 4, 5), 8)]
 
 
 def test_intervalgraph_remove_edge_default():
@@ -346,7 +336,7 @@ def test_intervalgraph_to_snapshots_default():
     assert len(S[0]) == 2
     assert S[1] == 8.5
     assert sorted(list(S[0][0].edges())) == [(1, 2), (2, 4)]
-    assert sorted(list(S[0][1].edges())) == [(4, 2), (6, 4)]
+    assert sorted(list(S[0][1].edges())) == [(2, 4), (4, 6)]
 
 
 def test_interval_graph_to_snapshots_len():
@@ -443,12 +433,12 @@ def test_intervalgraph_load_from_text_delimiter():
 def test_intervalgraph_load_from_text_inputtypes():
     path = os.path.join(current_dir, 'inputoutput_text/intervalgraph_load_from_text_default.txt')
     desired = dnx.IntervalGraph()
-    desired.add_edge('1', '2', '3.0', '4.0')
-    desired.add_edge('5', '6', '7.0', '8.0')
-    desired.add_edge('9', '10', '11.0', '12.0', weight=1.0)
-    desired.add_edge('13', '14', '15.0', '16.0', weight=2.0)
+    desired.add_edge('1', '2', 3.0, 4.0)
+    desired.add_edge('5', '6', 7.0, 8.0)
+    desired.add_edge('9', '10', 11.0, 12.0, weight=1.0)
+    desired.add_edge('13', '14', 15.0, 16.0, weight=2.0)
 
-    actual = dnx.IntervalGraph.load_from_txt(path, nodetype=str, intervaltype=str)
+    actual = dnx.IntervalGraph.load_from_txt(path, nodetype=str, intervaltype=float)
 
     assert actual.edges(data=True) == desired.edges(data=True)
 

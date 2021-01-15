@@ -2,7 +2,7 @@ from networkx import NetworkXError
 from sortedcontainers import SortedDict
 
 from dynetworkx.classes.intervalgraph import IntervalGraph
-from intervaltree import IntervalTree, Interval
+from dynetworkx.classes.intervaltree import IntervalTree
 from networkx.classes.digraph import DiGraph
 from networkx.classes.multidigraph import MultiDiGraph
 
@@ -85,15 +85,15 @@ class IntervalDiGraph(IntervalGraph):
         >>> G.add_edge(1, 3, 4, 9, weight=7, capacity=15, length=342.7)
         """
 
-        iedge = self.__get_iedge_in_tree(u, v, begin, end)
+        iedge = self.edges(u, v, begin, end, data=True)
 
         # if edge exists, just update attr
-        if iedge is not None:
+        if iedge:
             self._pred[u][iedge].update(attr)
             self._succ[v][iedge].update(attr)
             return
 
-        iedge = Interval(begin, end, (u, v))
+        iedge = (u, v, begin, end)
 
         # add nodes
 
@@ -201,7 +201,7 @@ class IntervalDiGraph(IntervalGraph):
 
         if begin is None and end is None:
             for iv in self._pred[u].keys():
-                if iv.data[1] == v:
+                if iv[1] == v:
                     return True
             return False
 
@@ -209,12 +209,14 @@ class IntervalDiGraph(IntervalGraph):
             if begin is None or end is None:
                 raise NetworkXError("For exact interval match (overlapping=False), both begin and end must be defined.")
 
-            return self.__get_iedge_in_tree(u, v, begin, end) is not None
+            return self.edges(u, v, begin, end) is not None
 
-        begin, end = self.__validate_interval(begin, end)
+        if begin and end and begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
 
         for iv in self._pred[u].keys():
-            if iv.data[1] == v and iv.overlaps(begin=begin, end=end):
+            if iv[1] == v and self.__overlaps_or_contains(iv, begin, end):
                 return True
         return False
 
@@ -265,25 +267,25 @@ class IntervalDiGraph(IntervalGraph):
         >>> G = dnx.IntervalDiGraph()
         >>> G.add_edges_from([(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)])
         >>> G.edges()
-        [Interval(8, 15, (2, 4)), Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4)), Interval(12, 19, (6, 4))]
+        [(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)]
 
         To get edges which appear in a specific interval:
 
         >>> G.edges(begin=10)
-        [Interval(12, 19, (6, 4)), Interval(1, 11, (2, 4)), Interval(8, 15, (2, 4))]
+        [(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)]
         >>> G.edges(end=5)
-        [Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4))]
+        [(1, 2, 3, 10), (2, 4, 1, 11)]
         >>> G.edges(begin=2, end=4)
-        [Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4))]
+        (1, 2, 3, 10), (2, 4, 1, 11)
 
         To get edges with either of the two nodes being defined:
 
         >>> G.edges(u=2)
-        [Interval(3, 10, (1, 2)), Interval(1, 11, (2, 4)), Interval(8, 15, (2, 4))]
+        [(2, 4, 1, 11), (2, 4, 8, 15)]
         >>> G.edges(u=2, begin=11)
-        [Interval(1, 11, (2, 4)), Interval(8, 15, (2, 4))]
+        [(2, 4, 8, 15)]
         >>> G.edges(u=2, v=4, end=8)
-        [Interval(1, 11, (2, 4))]
+        [(2, 4, 1, 11)]
         >>> G.edges(u=1, v=6)
         []
 
@@ -294,35 +296,49 @@ class IntervalDiGraph(IntervalGraph):
         >>> G.add_edge(1, 2, 3, 10, weight=10)
         >>> G.add_edge(2, 6, 2, 10)
         >>> G.edges(data="weight")
-        [(Interval(2, 8, (2, 3)), None), (Interval(3, 10, (1, 2)), 10), (Interval(1, 4, (1, 3)), 8)]
+        [(2, 6, 2, 10)), None), (1, 2, 3, 10), 10), (1, 3, 1, 4), 8)]
         >>> G.edges(data="weight", default=5)
-        [(Interval(2, 8, (2, 3)), 5), (Interval(3, 10, (1, 2)), 10), (Interval(1, 4, (1, 3)), 8)]
+        [(2, 6, 2, 10)), 5), (1, 2, 3, 10), 10), (1, 3, 1, 4), 8)]
         >>> G.edges(data=True)
-        [(Interval(2, 8, (2, 3)), {}), (Interval(3, 10, (1, 2)), {'weight': 10}), (Interval(1, 4, (1, 3)), {'height': 18, 'weight': 8})]
+        [(2, 6, 2, 10)), {}), (1, 2, 3, 10), {weight:10}), (1, 3, 1, 4), {weight:8, height:18})]
         >>> G.edges(u=1, begin=5, end=9, data="weight")
-        [(Interval(3, 10, (1, 2)), 10)]
+        [(1, 2, 3, 10), 10)]
         """
         # If non of the nodes are defined the interval tree is queried for the list of edges,
         # otherwise the edges are returned based on the nodes in the self._adj.o
-        iedges = []
-        if u is None and v is None:
-            if begin is None and end is None:
-                iedges = self.tree.all_intervals
+
+        if not u and not v:
+            if not begin and not end:
+                iedges = self.tree[None:None]
             # interval filtering
             else:
-                iedges = self.__search_tree(begin, end)
+                if begin and end and begin > end:
+                    raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                        "begin: {}, end: {}.".format(begin, end))
+                iedges = self.tree[begin:end]
 
         else:
             # Node filtering
-            if u is not None and v is not None:
-                iedges = [iv for iv in self._pred[u].keys() if iv.data[1] == v]
-            elif u is not None and u in self._pred:
+            if u and v:
+                if u not in self._pred:
+                    return []
+                if v not in self._succ:
+                    return []
+
+                iedges = [iv for iv in self._pred[u].keys() if iv[1] == v]
+            elif u:
+                if u not in self._pred:
+                    return []
                 iedges = self._pred[u].keys()
-            elif v in self._succ:
+            else:
+                if v not in self._succ:
+                    return []
                 iedges = self._succ[v].keys()
 
             # Interval filtering
-            begin, end = self.__validate_interval(begin, end)
+            if begin and end and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
             iedges = [iv for iv in iedges if IntervalDiGraph.__overlaps_or_contains(iv, begin, end)]
 
         # Appending attribute data if needed
@@ -330,9 +346,9 @@ class IntervalDiGraph(IntervalGraph):
             return iedges if isinstance(iedges, list) else list(iedges)
 
         if data is True:
-            return [(iv, self._pred[iv.data[0]][iv]) for iv in iedges]
+            return [(iv, self._pred[iv[0]][iv]) for iv in iedges]
 
-        return [(iv, self._pred[iv.data[0]][iv][data]) if data in self._pred[iv.data[0]][iv].keys() else
+        return [(iv, self._pred[iv[0]][iv][data]) if data in self._pred[iv[0]][iv].keys() else
                 (iv, default) for iv in iedges]
 
     def remove_edge(self, u, v, begin=None, end=None, overlapping=True):
@@ -393,7 +409,7 @@ class IntervalDiGraph(IntervalGraph):
             if begin is None or end is None:
                 raise NetworkXError("For exact interval match (overlapping=False), both begin and end must be defined.")
 
-            iedge = self.__get_iedge_in_tree(u, v, begin, end)
+            iedge = self.edges(u, v, begin, end)
             if iedge is not None:
                 self.__remove_iedge(iedge)
             return
@@ -403,14 +419,16 @@ class IntervalDiGraph(IntervalGraph):
         # remove every edge between u and v
         if begin is None and end is None:
             for iv in self._pred[u].keys():
-                if iv.data[1] == v:
+                if iv[1] == v:
                     iedges_to_remove.append(iv)
 
         # remove edge between u and v with overlapping interval with the given interval
-        begin, end = self.__validate_interval(begin, end)
+        if begin and end and begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
 
         for iv in self._pred[u].keys():
-            if iv.data[1] == v and IntervalDiGraph.__overlaps_or_contains(iv, begin, end):
+            if iv[1] == v and IntervalDiGraph.__overlaps_or_contains(iv, begin, end):
                 iedges_to_remove.append(iv)
 
         # removing found iedges
@@ -470,9 +488,9 @@ class IntervalDiGraph(IntervalGraph):
 
         # delta == True, return list of changes
         if begin == None:
-            begin = self.tree.begin()
+            begin = self.tree.begin
         if end == None:
-            end = self.tree.end()
+            end = self.tree.end
 
         current_degree = self.degree(node, begin=begin, end=begin)
         sd = SortedDict()
@@ -480,19 +498,19 @@ class IntervalDiGraph(IntervalGraph):
 
         # for each edge determine if the begin and/or end value is in specified time period
         for edge in self.edges(u=node, begin=begin, end=end):
-            if edge.begin >= begin:
+            if edge[2] >= begin:
                 # if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin, 1), []).append(edge.data)
-            if edge.end < end:
+                sd.setdefault((edge[2], 1), []).append((edge[0], edge[1]))
+            if edge[3] < end:
                 # if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end, -1), []).append(edge.data)
+                sd.setdefault((edge[3], -1), []).append((edge[0], edge[1]))
         for edge in self.edges(v=node, begin=begin, end=end):
-            if edge.begin >= begin:
+            if edge[2] >= begin:
                 # if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin, 1), []).append(edge.data)
-            if edge.end < end:
+                sd.setdefault((edge[2], 1), []).append((edge[0], edge[1]))
+            if edge[3] < end:
                 # if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end, -1), []).append(edge.data)
+                sd.setdefault((edge[3], -1), []).append((edge[0], edge[1]))
 
         for time in sd:
             for edge in sd[time]:
@@ -555,9 +573,9 @@ class IntervalDiGraph(IntervalGraph):
 
         # delta == True, return list of changes
         if begin == None:
-            begin = self.tree.begin()
+            begin = self.tree.begin
         if end == None:
-            end = self.tree.end()
+            end = self.tree.end
 
         current_degree = self.in_degree(node, begin=begin, end=begin)
         sd = SortedDict()
@@ -565,12 +583,12 @@ class IntervalDiGraph(IntervalGraph):
 
         # for each edge determine if the begin and/or end value is in specified time period
         for edge in self.edges(v=node, begin=begin, end=end):
-            if edge.begin >= begin:
+            if edge[2] >= begin:
                 # if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin, 1), []).append(edge.data)
-            if edge.end < end:
+                sd.setdefault((edge[2], 1), []).append((edge[0], edge[1]))
+            if edge[3] < end:
                 # if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end, -1), []).append(edge.data)
+                sd.setdefault((edge[3], -1), []).append((edge[0], edge[1]))
 
         for time in sd:
             for edge in sd[time]:
@@ -633,9 +651,9 @@ class IntervalDiGraph(IntervalGraph):
 
         # delta == True, return list of changes
         if begin == None:
-            begin = self.tree.begin()
+            begin = self.tree.begin
         if end == None:
-            end = self.tree.end()
+            end = self.tree.end
 
         current_degree = self.out_degree(node, begin=begin, end=begin)
         sd = SortedDict()
@@ -643,12 +661,12 @@ class IntervalDiGraph(IntervalGraph):
 
         # for each edge determine if the begin and/or end value is in specified time period
         for edge in self.edges(u=node, begin=begin, end=end):
-            if edge.begin >= begin:
+            if edge[2] >= begin:
                 # if begin is in specified time period, add to SortedDict, with +1 to indicate begin
-                sd.setdefault((edge.begin, 1), []).append(edge.data)
-            if edge.end < end:
+                sd.setdefault((edge[2], 1), []).append((edge[0], edge[1]))
+            if edge[3] < end:
                 # if begin is in specified time period, add to SortedDict, with -1 to indicate begin
-                sd.setdefault((edge.end, -1), []).append(edge.data)
+                sd.setdefault((edge[3], -1), []).append((edge[0], edge[1]))
 
         for time in sd:
             for edge in sd[time]:
@@ -667,7 +685,6 @@ class IntervalDiGraph(IntervalGraph):
         Wrapper function for IntervalDiGraph.to_subgraph. Refer to IntervalDiGraph.to_subgraph for full description.
         """
         return self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data, edge_interval_data=edge_interval_data, node_data=node_data)
-
 
     def to_subgraph(self, begin, end, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
         """Return a networkx DiGraph or MultiDiGraph which includes all the nodes and
@@ -724,7 +741,10 @@ class IntervalDiGraph(IntervalGraph):
         >>> list(M.edges(data=True))
         [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 11, 'begin': 1}), (2, 4, {'end': 15, 'begin': 8})]
         """
-        iedges = self.__search_tree(begin, end)
+        if begin and end and begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
+        iedges = self.tree[begin:end]
 
         if multigraph:
             G = MultiDiGraph()
@@ -764,86 +784,13 @@ class IntervalDiGraph(IntervalGraph):
         --------
         >>> G = dnx.IntervalDiGraph()
         >>> G.add_edge(1, 2, 3, 10)
-        >>> iedge = Interval(3, 10, (1, 2))   # Interval(begin, end, (u, v))
+        >>> iedge = (1, 2, 3, 10)
         >>> G.__remove_iedge(iedge)
         """
-        self.tree.discard(iedge)
-        self._pred[iedge.data[0]].pop(iedge, None)
-        self._succ[iedge.data[1]].pop(iedge, None)
+        self.tree.remove(iedge)
+        self._pred[iedge[0]].pop(iedge, None)
+        self._succ[iedge[1]].pop(iedge, None)
 
-    def __get_iedge_in_tree(self, u, v, begin, end):
-        """Return interval edge if found in the interval graph with the exact interval,
-        otherwise return None.
-
-        Parameters
-        ----------
-        u, v : nodes
-            Nodes can be, for example, strings or numbers.
-            Nodes must be hashable (and not None) Python objects.
-        begin : int or float
-            Inclusive beginning time of the edge appearing in the interval graph.
-        end : int or float
-            Non-inclusive ending time of the edge appearing in the interval graph.
-            Must be bigger than begin.
-
-        Examples
-        --------
-        >>> G = dnx.IntervalDiGraph()
-        >>> G.add_edge(1, 2, 3, 10)
-        >>> G.__get_iedge_in_tree(2, 1, 3, 10)
-        Interval(3, 10, (1, 2))
-        >>> G.__get_iedge_in_tree(2, 1, 4, 10)
-        None
-        """
-
-        temp_iedge = Interval(begin, end, (u, v))
-        if temp_iedge in self.tree:
-            return temp_iedge
-
-        return None
-
-    def __validate_interval(self, begin=None, end=None):
-        """Returns validated begin and end.
-        Replaces begin with the begin time of the graph if None is passed.
-        Replaces end with the end time of the graph + 1 (to make it inclusive) if None is passed.
-        Raises an exception if begin is larger than end.
-
-        Parameters
-        ----------
-        begin : int or float, optional
-            Inclusive beginning time of the edge appearing in the interval graph.
-        end : int or float, optional
-            Non-inclusive ending time of the edge appearing in the interval graph.
-        """
-        if begin is None:
-            begin = self.tree.begin()
-
-        if end is None:
-            end = self.tree.end() + 1
-
-        if begin > end:
-            raise NetworkXError("IntervalDiGraph: interval end must be bigger than or equal to begin: "
-                                "begin: {}, end: {}.".format(begin, end))
-
-        return begin, end
-
-    def __search_tree(self, begin=None, end=None):
-        """if begin and end are equal performs a point search on the tree,
-        otherwise an interval search is performed.
-
-       Parameters
-       ----------
-       begin: int or float, optional  (default= beginning of the entire interval graph)
-            Inclusive beginning time of the node appearing in the interval graph.
-        end: int or float, optional  (default= end of the entire interval graph + 1)
-            Non-inclusive ending time of the node appearing in the interval graph.
-            Must be bigger than or equal begin.
-            Note that the default value is shifted up by 1 to make it an inclusive end.
-       """
-        begin, end = self.__validate_interval(begin, end)
-        if begin != end:
-            return self.tree[begin:end]
-        return self.tree[begin]
 
     @staticmethod
     def __overlaps_or_contains(iv, begin, end):
@@ -859,4 +806,10 @@ class IntervalDiGraph(IntervalGraph):
             Must be bigger than or equal begin.
        """
         # need to check for iv.contains(begin) in case begin == end
-        return iv.overlaps(begin, end) or iv.contains_point(begin)
+        if not begin and not end:
+            return True
+        if not begin:
+            return iv[2] < end
+        if not end:
+            return iv[3] > begin
+        return (iv[2] < end and iv[3] > begin) or iv[2] == begin
