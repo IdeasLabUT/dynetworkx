@@ -1269,7 +1269,7 @@ class IntervalGraph(object):
         return snapshots
 
     def to_snapshot_graph(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False,
-                          edge_timestamp_data=False,
+                          edge_interval_data=False,
                           node_data=False, return_length=False):
         """
         Return a dnx.SnapshotGraph of the interval graph.
@@ -1286,7 +1286,7 @@ class IntervalGraph(object):
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
         edge_data: bool, optional (default= False)
             If True, edges will keep their attributes.
-        edge_timestamp_data : bool, optional (default= False)
+        edge_interval_data : bool, optional (default= False)
             If True, each edge's attribute will also include its timestamp data.
             If `edge_data= True` and there already exist edge attributes named timestamp
             it will be overwritten.
@@ -1334,7 +1334,7 @@ class IntervalGraph(object):
             snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
                                              length_of_snapshots=length_of_snapshots,
                                              multigraph=multigraph, edge_data=edge_data,
-                                             edge_timestamp_data=edge_timestamp_data,
+                                             edge_interval_data=edge_interval_data,
                                              node_data=node_data, return_length=return_length)
             for snapshot in snapshots:
                 G.insert(snapshot)
@@ -1345,7 +1345,7 @@ class IntervalGraph(object):
             snapshots = self.to_snapshots(number_of_snapshots=number_of_snapshots,
                                           length_of_snapshots=length_of_snapshots,
                                           multigraph=multigraph, edge_data=edge_data,
-                                          edge_timestamp_data=edge_timestamp_data,
+                                          edge_interval_data=edge_interval_data,
                                           node_data=node_data, return_length=return_length)
             for snapshot in snapshots:
                 G.insert(snapshot)
