@@ -4,6 +4,7 @@ from dynetworkx.classes.snapshotgraph import SnapshotGraph
 import numpy as np
 from networkx import adjacency_matrix, from_numpy_array
 
+
 class SnapshotDiGraph(SnapshotGraph):
 
     def add_snapshot(self, ebunch=None, graph=None, num_in_seq=None, multi=False):
@@ -39,11 +40,10 @@ class SnapshotDiGraph(SnapshotGraph):
         else:
             g = graph
 
-        if (not num_in_seq) or (num_in_seq == len(self.snapshots) + 1):
-            self.snapshots.append(g)
+        if not num_in_seq:
+            num_in_seq = len(self.snapshots)
 
-        elif num_in_seq > len(self.snapshots):
-            while num_in_seq > len(self.snapshots):
-                self.snapshots.append(g)
+        if num_in_seq > len(self.snapshots):
+            self.insert(g, snap_len=num_in_seq-len(self.snapshots)+1, num_in_seq=num_in_seq)
         else:
             self.insert(g, snap_len=1, num_in_seq=num_in_seq)
