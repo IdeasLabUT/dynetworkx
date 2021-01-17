@@ -125,7 +125,7 @@ class SnapshotGraph(object):
 
         return iter(self.snapshots.values())
 
-    def insert(self, graph, start, end):
+    def insert(self, graph, start=None, end=None, time=None):
         """Insert a graph into the snapshot graph, with specified intervals.
 
         Parameters
@@ -134,6 +134,7 @@ class SnapshotGraph(object):
             A networkx graph to be inserted into snapshot graph.
         start: start of the interval, inclusive
         end: end of the interval, exclusive
+        time: timestamp for impulses, cannot be used together with (start, end)
 
         Returns
         -------
@@ -144,15 +145,21 @@ class SnapshotGraph(object):
         >>> nxG1 = nx.Graph()
         >>> nxG1.add_edges_from([(1, 2), (1, 3)])
         >>> G = dnx.SnapshotGraph()
-        >>> G.insert(nxG1, 0, 3)
+        >>> G.insert(nxG1, start=0, end=3)
 
         """
-        if start > end:
+        if time and (start or end):
+            raise ValueError('Time and (start or end) cannot both be specified.')
+        elif time:
+            self.snapshots.update({(time, time): graph})
+        elif (start is None and end is not None) or (start is not None and end is None):
+            raise ValueError('Start and end must both be specified for intervals.')
+        elif start > end:
             raise ValueError('Start of the interval must be lower or equal to end')
         else:
             self.snapshots.update({(start, end): graph})
 
-    def add_snapshot(self, ebunch=None, graph=None, start=None, end=None):
+    def add_snapshot(self, ebunch=None, graph=None, start=None, end=None, time=None):
         """Add a snapshot with a bunch of edge values.
 
         Parameters
@@ -163,6 +170,7 @@ class SnapshotGraph(object):
             networkx graph to be inserted into snapshot graph.
         start: start timestamp, inclusive
         end: end timestamp, exclusive
+        time: timestamp for impulses, cannot be used together with (start, end)
 
         Returns
         -------
@@ -179,10 +187,14 @@ class SnapshotGraph(object):
         else:
             g = graph
 
-        if start is None or end is None:
-            raise ValueError('Start and end must both be specified.')
+        if time and (start or end):
+            raise ValueError('Time and (start or end) cannot both be specified.')
+        elif time:
+            self.insert(g, time=time)
+        elif (start is None and end is not None) or (start is not None and end is None):
+            raise ValueError('Start and end must both be specified for intervals.')
         else:
-            self.insert(g, start, end)
+            self.insert(g, start=start, end=end)
 
     def subgraph(self, nbunch, sbunch=None, start=None, end=None):
         """Return a snapshot graph containing only the nodes in bunch, and snapshot indexes in sbunch.
@@ -206,8 +218,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)])
-        >>> G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)])
+        >>> G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)], start=0, end=3)
+        >>> G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)], start=3, end=10)
         >>> H = G.subgraph([4, 6])
         >>> type(H)
         <class 'snapshotgraph.SnapshotGraph'>
@@ -255,8 +267,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3. end=10)
         >>> G.degree(sbunch=[1])
         [DegreeView({1: 2, 4: 1, 3: 1})]
         >>> G.degree(nbunch=[1, 2])
@@ -298,8 +310,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.number_of_nodes(sbunch=[1])
         [3]
         >>> G.number_of_nodes(sbunch=[0, 1])
@@ -334,8 +346,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.order(sbunch=[1])
         [3]
         >>> G.order(sbunch=[0, 1])
@@ -371,8 +383,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.has_node(1, sbunch=[1])
         [True]
         >>> G.has_node(1)
@@ -407,8 +419,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.is_multigraph(sbunch=[0, 1])
         [False, False]
         >>> G.is_multigraph()
@@ -443,8 +455,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.is_directed(sbunch=[0, 1])
         [False, False]
         >>> G.is_directed()
@@ -479,8 +491,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.to_directed(sbunch=[0, 1])
         [<networkx.classes.digraph.DiGraph object at 0x7f1a6de49dd8>, <networkx.classes.digraph.DiGraph object at 0x7f1a6de49e10>]
 
@@ -513,8 +525,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.to_directed(sbunch=[0, 1])
         [<networkx.classes.graph.Graph object at 0x7ff532219e10>, <networkx.classes.graph.Graph object at 0x7ff532219e48>]
 
@@ -550,8 +562,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
         >>> G.size(sbunch=[0, 1])
         [2, 2]
         >>> G.size()
@@ -699,8 +711,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
 
         >>> G.add_nodes_from([5, 6, 7], [0])
         >>> G.add_nodes_from([8, 9, 10, 11], [1])
@@ -753,8 +765,8 @@ class SnapshotGraph(object):
         Examples
         --------
         >>> G = dnx.SnapshotGraph()
-        >>> G.add_snapshot([(1, 2), (1, 3)])
-        >>> G.add_snapshot([(1, 4), (1, 3)])
+        >>> G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
+        >>> G.add_snapshot([(1, 4), (1, 3)], start=3, end=10)
 
         >>> G.add_edges_from([(5, 6), (7, 6)], [0])
         >>> G.add_edges_from([(8, 9), (10, 11)], [0, 1])

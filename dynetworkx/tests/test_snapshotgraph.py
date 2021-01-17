@@ -69,7 +69,7 @@ def test_snapshotgraph_contains():
     assert nxG1 in G
 
 
-def test_snapshotgraph_insert(): # TODO: need to fix assert
+def test_snapshotgraph_insert_with_interval():
     G = dnx.SnapshotGraph()
     nxG1 = nx.Graph()
     nxG1.add_edges_from([(1, 2), (1, 3)])
@@ -80,26 +80,58 @@ def test_snapshotgraph_insert(): # TODO: need to fix assert
     assert list(G.snapshots.values()) == [nxG1]
 
     G.insert(nxG1, start=3, end=10)
-    G.insert(nxG1, start=10, end=15)
-    G.insert(nxG2, start=15, end=17)
+    G.insert(nxG1, start=15, end=17)
+    G.insert(nxG2, start=10, end=15)
 
-    assert list(G.snapshots.values()) == [nxG1, nxG1, nxG1, nxG2]
+    assert list(G.snapshots.values()) == [nxG1, nxG1, nxG2, nxG1]
     assert list(G.snapshots.keys()) == [(0, 3), (3, 10), (10, 15), (15, 17)]
 
 
-def test_snapshotgraph_add_snapshot():
+def test_snapshotgraph_insert_with_impulses():
     G = dnx.SnapshotGraph()
     nxG1 = nx.Graph()
     nxG1.add_edges_from([(1, 2), (1, 3)])
+    nxG2 = nx.Graph()
+    nxG2.add_edges_from([(1, 2), (1, 3)])
+    G.insert(nxG1, time=1)
+
+    assert list(G.snapshots.values()) == [nxG1]
+
+    G.insert(nxG1, time=2)
+    G.insert(nxG1, time=6)
+    G.insert(nxG2, time=3)
+
+    assert list(G.snapshots.values()) == [nxG1, nxG1, nxG2, nxG1]
+    assert list(G.snapshots.keys()) == [(1, 1), (2, 2), (3, 3), (6, 6)]
+
+
+def test_snapshotgraph_add_snapshot_with_interval():
+    G = dnx.SnapshotGraph()
+    nxG1 = nx.Graph()
+    nxG1.add_edges_from([(1, 4), (2, 3)])
     G.add_snapshot([(1, 2), (1, 3)], start=0, end=3)
     G.add_snapshot(graph=nxG1, start=3, end=10)
 
     keys = G.snapshots.keys()
-    assert list(G.snapshots[keys[0]].edges(data=True)) == list(nxG1.edges(data=True))
+
+    assert list(G.snapshots[keys[0]].edges(data=True)) == [(1, 2, {}), (1, 3, {})]
     assert list(G.snapshots[keys[1]].edges(data=True)) == list(nxG1.edges(data=True))
 
 
-def test_snapshotgraph_subgraph(): # TODO this will error
+def test_snapshotgraph_add_snapshot_with_impulses():
+    G = dnx.SnapshotGraph()
+    nxG1 = nx.Graph()
+    nxG1.add_edges_from([(1, 4), (2, 3)])
+    G.add_snapshot([(1, 2), (1, 3)], time=1)
+    G.add_snapshot(graph=nxG1, time=3)
+
+    keys = G.snapshots.keys()
+
+    assert list(G.snapshots[keys[0]].edges(data=True)) == [(1, 2, {}), (1, 3, {})]
+    assert list(G.snapshots[keys[1]].edges(data=True)) == list(nxG1.edges(data=True))
+
+
+def test_snapshotgraph_subgraph():
     G = dnx.SnapshotGraph()
     G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)], start=0, end=3)
     G.add_snapshot([(1, 2), (2, 3), (4, 6), (2, 4)], start=3, end=10)
