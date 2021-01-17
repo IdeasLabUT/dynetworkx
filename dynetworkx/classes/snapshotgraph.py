@@ -577,11 +577,18 @@ class SnapshotGraph(object):
             however it can be out of order.
         start: start timestamp, inclusive
         end: end timestamp, exclusive
+        include_interval: if True, return snapshots with its corresponding intervals
+        split_overlaps: if True, when query by time interval, split snapshots if query interval overlaps with any
+            snapshots' intervals. For ex: graph G contains snapshots with time intervals [(0,4),(4,6),(6,10)]. If query
+            interval is [2,10], the snapshot with interval (0,4) will be split into two snapshots (0,2) and (2,4), both
+            of which have the same copy of the original snapshot. This parameter is used for updating graphs by
+            interval. For intance, with the example above, if you want to update interval (2,10), then the snapshot at
+            (0,2) won't be updated.
 
         Returns
         -------
-        List of networkx graph objects.
-
+        If include_interval: List of tuples of (interval, networkx graph object).
+        else: List of networkx graph objects.
 
         Examples
         --------
@@ -672,6 +679,7 @@ class SnapshotGraph(object):
 
     def add_nodes_from(self, nbunch, sbunch=None, start=None, end=None, **attrs):
         """Adds nodes to snapshots in sbunch.
+        Note: This function may lead to increase in number of snapshots if changes occur within a snapshot.
 
         Parameters
         ----------
@@ -725,6 +733,7 @@ class SnapshotGraph(object):
 
     def add_edges_from(self, ebunch, sbunch=None, start=None, end=None, **attrs):
         """Adds edges to snapshots in sbunch.
+        Note: This function may lead to increase in number of snapshots if changes occur within a snapshot.
 
         Parameters
         ----------
