@@ -148,9 +148,9 @@ class SnapshotGraph(object):
         >>> G.insert(nxG1, start=0, end=3)
 
         """
-        if time and (start or end):
+        if time is not None and (start or end):
             raise ValueError('Time and (start or end) cannot both be specified.')
-        elif time:
+        elif time is not None:
             self.snapshots.update({(time, time): graph})
         elif (start is None and end is not None) or (start is not None and end is None):
             raise ValueError('Start and end must both be specified for intervals.')
@@ -187,9 +187,9 @@ class SnapshotGraph(object):
         else:
             g = graph
 
-        if time and (start or end):
+        if time is not None and (start or end):
             raise ValueError('Time and (start or end) cannot both be specified.')
-        elif time:
+        elif time is not None:
             self.insert(g, time=time)
         elif (start is None and end is not None) or (start is not None and end is None):
             raise ValueError('Start and end must both be specified for intervals.')
