@@ -1312,7 +1312,7 @@ class IntervalGraph(object):
 
         >>> G = dnx.IntervalGraph()
         >>> G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])
-        >>> S, l = G.to_snapshot_graph(2, edge_timestamp_data=True, return_length=True)
+        >>> S, l = G.to_snapshot_graph(2, edge_interval_data=True, return_length=True)
         >>> for g in S:
         >>> ... g.edges(data=True))
         [(1, 2, {'start_time': 10, 'end_time': 11}), (2, 4, {'start_time': 11, 'end_time': 12})]
@@ -1330,27 +1330,21 @@ class IntervalGraph(object):
 
         G = dnx.SnapshotGraph()
 
-        if return_length == True:
-            snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
-                                             length_of_snapshots=length_of_snapshots,
-                                             multigraph=multigraph, edge_data=edge_data,
-                                             edge_interval_data=edge_interval_data,
-                                             node_data=node_data, return_length=return_length)
-            for snapshot in snapshots:
-                G.insert(snapshot)
+        snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
+                                        length_of_snapshots=length_of_snapshots,
+                                        multigraph=multigraph, edge_data=edge_data,
+                                        edge_interval_data=edge_interval_data,
+                                        node_data=node_data, return_length=True)
 
+        for i in range(len(snapshots)):
+            end_inclusive_addition = 0
+            if i == number_of_snapshots - 1:
+                end_inclusive_addition = 1
+            G.insert(snapshots[i], start=self.tree.begin + l*i, end=self.tree.begin + l*(i+1) + end_inclusive_addition)
+
+        if return_length:
             return G, l
-
-        else:
-            snapshots = self.to_snapshots(number_of_snapshots=number_of_snapshots,
-                                          length_of_snapshots=length_of_snapshots,
-                                          multigraph=multigraph, edge_data=edge_data,
-                                          edge_interval_data=edge_interval_data,
-                                          node_data=node_data, return_length=return_length)
-            for snapshot in snapshots:
-                G.insert(snapshot)
-
-            return G
+        return G
 
     @staticmethod
     def from_snapshot_graph(snapshot_graph, begin=0, period=1):

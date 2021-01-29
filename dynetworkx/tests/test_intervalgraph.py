@@ -254,6 +254,17 @@ def test_intervalgraph_from_networkx_graph_timestamp():
     assert actual.edges(data=True) == desired.edges(data=True)
 
 
+def test_intervalgraph_to_snapshot_graph():
+    G = dnx.IntervalGraph()
+    G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])
+    S, l = G.to_snapshot_graph(2, edge_interval_data=True, return_length=True)
+    actual = []
+    for g in S:
+        actual.append(g.edges(data=True))
+    assert list(actual[0]) == [(1, 2, {'begin': 10, 'end': 11}), (2, 4, {'begin': 11, 'end': 12})]
+    assert list(actual[1]) == [(2, 4, {'begin': 15, 'end': 16}), (4, 6, {'begin': 19, 'end': 20})]
+
+
 def test_intervalgraph_from_snapshots_default():
     desired = dnx.IntervalGraph()
     desired.add_edge(1, 2, 0, 1)
