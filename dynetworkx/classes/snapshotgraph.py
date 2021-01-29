@@ -152,8 +152,8 @@ class SnapshotGraph(object):
             raise ValueError('Time and (start or end) cannot both be specified.')
         elif time is not None:
             self.snapshots.update({(time, time): graph})
-        elif (start is None and end is not None) or (start is not None and end is None):
-            raise ValueError('Start and end must both be specified for intervals.')
+        elif start is None or end is None:
+            raise ValueError('Either time or both start and end must be specified.')
         elif start > end:
             raise ValueError('Start of the interval must be lower or equal to end')
         else:
@@ -191,8 +191,8 @@ class SnapshotGraph(object):
             raise ValueError('Time and (start or end) cannot both be specified.')
         elif time is not None:
             self.insert(g, time=time)
-        elif (start is None and end is not None) or (start is not None and end is None):
-            raise ValueError('Start and end must both be specified for intervals.')
+        elif start is None and end is None:
+            raise ValueError('Either time or both start and end must be specified.')
         else:
             self.insert(g, start=start, end=end)
 
