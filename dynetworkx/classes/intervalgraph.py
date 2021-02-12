@@ -601,12 +601,9 @@ class IntervalGraph(object):
         >>> G.add_edge(1, 3, 4, 9, weight=7, capacity=15, length=342.7)
         """
 
-        iedge = self.edges(u, v, begin, end)
-
-        # if edge exists, just update attr
-        if iedge:
+        if u in self._adj and (u, v, begin, end) in self._adj[u]:
             # since both point to the same attr, updating one is enough
-            self._adj[u][iedge].update(attr)
+            self._adj[u][(u, v, begin, end)].update(attr)
             return
 
         iedge = (u, v, begin, end)

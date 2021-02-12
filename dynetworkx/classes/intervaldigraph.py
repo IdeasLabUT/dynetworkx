@@ -88,9 +88,9 @@ class IntervalDiGraph(IntervalGraph):
         iedge = self.edges(u, v, begin, end, data=True)
 
         # if edge exists, just update attr
-        if iedge:
-            self._pred[u][iedge].update(attr)
-            self._succ[v][iedge].update(attr)
+        if u in self._pred and v in self._succ and (u, v, begin, end) in self._pred[u] and (u, v, begin, end) in self._succ:
+            self._pred[u][(u, v, begin, end)].update(attr)
+            self._succ[v][(u, v, begin, end)].update(attr)
             return
 
         iedge = (u, v, begin, end)

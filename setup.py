@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='DyNetworkX',
-    version='0.2',
+    version='0.3',
     author='Makan Arastuie',
     author_email='Makan.Arastuie@rockets.utoledo.edu',
     packages=['dynetworkx',
@@ -14,7 +14,6 @@ setup(
     description='DyNetworkX is a Python package for the study of dynamic network analysis.',
     long_description=open('README.rst').read(),
     install_requires=['networkx',
-                      'intervaltree',
                       'sortedcontainers',
                       'numpy',
                       ],
