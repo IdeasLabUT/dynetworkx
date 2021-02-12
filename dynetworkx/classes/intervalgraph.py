@@ -214,6 +214,75 @@ class IntervalGraph(object):
         """
         return self.tree.begin, self.tree.end
 
+    def unique_timestamps(self, begin=None, end=None, inclusive=(True, True)):
+        """Return all time events within the given interval.
+
+        Parameters
+        ----------
+        begin: int or float, optional (default= beginning of the entire interval graph)
+            Beginning time of the node appearing in the interval graph.
+        end: int or float, optional  (default= end of the entire interval graph)
+            Ending time of the node appearing in the interval graph.
+            Must be bigger than or equal begin.
+        inclusive: 2-tuple, optional (default= (True, True))
+            First element is true if beginning of interval should be inclusive.
+            Second element is true if end of interval should be inclusive
+
+        Examples
+        --------
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_edges_from([(1, 2, 0, 10), (3, 7, 9, 16)])
+        >>> G.unique_timestamps()
+        [0, 9, 10, 16]
+        """
+        return self.tree.unique_timestamps(begin=begin, end=end, inclusive=inclusive)
+
+    def unique_begin_timestamps(self, begin=None, end=None, inclusive=(True, True)):
+        """Return all begin time events within the given interval.
+
+        Parameters
+        ----------
+        begin: int or float, optional (default= beginning of the entire interval graph)
+            Beginning time of the node appearing in the interval graph.
+        end: int or float, optional  (default= end of the entire interval graph)
+            Ending time of the node appearing in the interval graph.
+            Must be bigger than or equal begin.
+        inclusive: 2-tuple, optional (default= (True, True))
+            First element is true if beginning of interval should be inclusive.
+            Second element is true if end of interval should be inclusive
+
+        Examples
+        --------
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_edges_from([(1, 2, 0, 10), (3, 7, 9, 16)])
+        >>> G.unique_timestamps()
+        [0, 9]
+        """
+        return self.tree.unique_begin_timestamps(begin=begin, end=end, inclusive=inclusive)
+
+    def unique_end_timestamps(self, begin=None, end=None, inclusive=(True, True)):
+        """Return all end time events within the given interval.
+
+        Parameters
+        ----------
+        begin: int or float, optional (default= beginning of the entire interval graph)
+            Beginning time of the node appearing in the interval graph.
+        end: int or float, optional  (default= end of the entire interval graph)
+            Ending time of the node appearing in the interval graph.
+            Must be bigger than or equal begin.
+        inclusive: 2-tuple, optional (default= (True, True))
+            First element is true if beginning of interval should be inclusive.
+            Second element is true if end of interval should be inclusive
+
+        Examples
+        --------
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_edges_from([(1, 2, 0, 10), (3, 7, 9, 16)])
+        >>> G.unique_timestamps()
+        [10, 16]
+        """
+        return self.tree.unique_end_timestamps(begin=begin, end=end, inclusive=inclusive)
+
     def add_node(self, node_for_adding, **attr):
         """Add a single node `node_for_adding` and update node attributes.
 

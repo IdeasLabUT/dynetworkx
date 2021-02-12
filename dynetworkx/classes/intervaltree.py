@@ -1,6 +1,6 @@
 import networkx as nx
 from sortedcontainers import SortedDict, SortedList
-
+import operator
 
 class Node:
 
@@ -225,3 +225,74 @@ class IntervalTree:
 
         for node in self.query(root, interval_start, interval_end):
             yield from node.edges
+
+    def unique_timestamps(self, begin=None, end=None, inclusive=(True, True)):
+        timestamps = set()
+
+        if not begin:
+            begin = self.begin
+        if not end:
+            end = self.end
+
+        if inclusive[0]:
+            begin_operator = operator.__le__
+        else:
+            begin_operator = operator.__lt__
+        if inclusive[1]:
+            end_operator = operator.__le__
+        else:
+            end_operator = operator.__lt__
+
+        for n in self.query(self.root, begin, end):
+            if n.low not in timestamps and begin_operator(begin, n.low) and end_operator(n.low, end):
+                timestamps.add(n.low)
+            if n.high not in timestamps and begin_operator(begin, n.high) and end_operator(n.high, end):
+                timestamps.add(n.high)
+
+        return sorted(timestamps)
+
+    def unique_begin_timestamps(self, begin=None, end=None, inclusive=(True, True)):
+        timestamps = set()
+
+        if not begin:
+            begin = self.begin
+        if not end:
+            end = self.end
+
+        if inclusive[0]:
+            begin_operator = operator.__le__
+        else:
+            begin_operator = operator.__lt__
+        if inclusive[1]:
+            end_operator = operator.__le__
+        else:
+            end_operator = operator.__lt__
+
+        for n in self.query(self.root, begin, end):
+            if n.low not in timestamps and begin_operator(begin, n.low) and end_operator(n.low, end):
+                timestamps.add(n.low)
+
+        return sorted(timestamps)
+
+    def unique_end_timestamps(self, begin=None, end=None, inclusive=(True, True)):
+        timestamps = set()
+
+        if not begin:
+            begin = self.begin
+        if not end:
+            end = self.end
+
+        if inclusive[0]:
+            begin_operator = operator.__le__
+        else:
+            begin_operator = operator.__lt__
+        if inclusive[1]:
+            end_operator = operator.__le__
+        else:
+            end_operator = operator.__lt__
+
+        for n in self.query(self.root, begin, end):
+            if n.high not in timestamps and begin_operator(begin, n.high) and end_operator(n.high, end):
+                timestamps.add(n.high)
+
+        return sorted(timestamps)
