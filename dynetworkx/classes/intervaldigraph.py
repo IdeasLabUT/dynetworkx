@@ -88,7 +88,7 @@ class IntervalDiGraph(IntervalGraph):
         iedge = self.edges(u, v, begin, end, data=True)
 
         # if edge exists, just update attr
-        if u in self._pred and v in self._succ and (u, v, begin, end) in self._pred[u] and (u, v, begin, end) in self._succ:
+        if u in self._pred and v in self._succ and v in self._pred[u] and u in self._succ[v] and (u, v, begin, end) in self._pred[u][v] and (u, v, begin, end) in self._succ[v][u]:
             self._pred[u][(u, v, begin, end)].update(attr)
             self._succ[v][(u, v, begin, end)].update(attr)
             return
@@ -97,8 +97,8 @@ class IntervalDiGraph(IntervalGraph):
 
         # add nodes
 
-        self._pred.setdefault(u, {})
-        self._succ.setdefault(v, {})
+        self._pred.setdefault(u, {}).setdefault(v, {})
+        self._succ.setdefault(v, {}).setdefault(u, {})
         self._node.setdefault(u, {})
         self._node.setdefault(v, {})
 
@@ -108,7 +108,7 @@ class IntervalDiGraph(IntervalGraph):
         except ValueError:
             raise NetworkXError("IntervalDiGraph: edge duration must be strictly bigger than zero {0}.".format(iedge))
 
-        self._pred[u][iedge] = self._succ[v][iedge] = attr
+        self._pred[u][v][iedge] = self._succ[v][u][iedge] = attr
 
     def add_edges_from(self, ebunch_to_add, **attr):
         """Add all the edges in ebunch_to_add.
@@ -199,10 +199,14 @@ class IntervalDiGraph(IntervalGraph):
         False
         """
 
+        if u not in self._pred:
+            return False
+        if v not in self._pred[u]:
+            return False
+
         if begin is None and end is None:
-            for iv in self._pred[u].keys():
-                if iv[1] == v:
-                    return True
+            if v in self._pred[u]:
+                return True
             return False
 
         if not overlapping:
@@ -215,8 +219,8 @@ class IntervalDiGraph(IntervalGraph):
             raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
-        for iv in self._pred[u].keys():
-            if iv[1] == v and self.__overlaps_or_contains(iv, begin, end):
+        for iv in self._pred[u][v]:
+            if self.__overlaps_or_contains(iv, begin, end):
                 return True
         return False
 
@@ -325,15 +329,15 @@ class IntervalDiGraph(IntervalGraph):
                 if v not in self._succ:
                     return []
 
-                iedges = [iv for iv in self._pred[u].keys() if iv[1] == v]
+                iedges = self._pred[u][v]
             elif u:
                 if u not in self._pred:
                     return []
-                iedges = self._pred[u].keys()
+                iedges = [iv for v in self._pred[u] for iv in self._pred[u][v]]
             else:
                 if v not in self._succ:
                     return []
-                iedges = self._succ[v].keys()
+                iedges = [iv for u in self._succ[v] for iv in self._succ[v][u]]
 
             # Interval filtering
             if begin and end and begin > end:
@@ -346,9 +350,9 @@ class IntervalDiGraph(IntervalGraph):
             return iedges if isinstance(iedges, list) else list(iedges)
 
         if data is True:
-            return [(iv, self._pred[iv[0]][iv]) for iv in iedges]
+            return [(iv, self._pred[iv[0]][iv[1]][iv]) for iv in iedges]
 
-        return [(iv, self._pred[iv[0]][iv][data]) if data in self._pred[iv[0]][iv].keys() else
+        return [(iv, self._pred[iv[0]][iv[1]][iv][data]) if data in self._pred[iv[0]][iv[1]][iv] else
                 (iv, default) for iv in iedges]
 
     def remove_edge(self, u, v, begin=None, end=None, overlapping=True):
@@ -404,6 +408,10 @@ class IntervalDiGraph(IntervalGraph):
         >>> G.has_edge(2, 4, begin=1, end=11)
         False
         """
+
+        if u not in self._pred or v not in self._pred[u]:
+            return
+
         # remove edge between u and v with the exact given interval
         if not overlapping:
             if begin is None or end is None:
@@ -418,22 +426,32 @@ class IntervalDiGraph(IntervalGraph):
 
         # remove every edge between u and v
         if begin is None and end is None:
-            for iv in self._pred[u].keys():
-                if iv[1] == v:
-                    iedges_to_remove.append(iv)
+            for iv in self._pred[u][v]:
+                iedges_to_remove.append(iv)
 
         # remove edge between u and v with overlapping interval with the given interval
-        if begin and end and begin > end:
-            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+        else:
+            if begin and end and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
-        for iv in self._pred[u].keys():
-            if iv[1] == v and IntervalDiGraph.__overlaps_or_contains(iv, begin, end):
-                iedges_to_remove.append(iv)
+            for iv in self._pred[u][v]:
+                if IntervalDiGraph.__overlaps_or_contains(iv, begin, end):
+                    iedges_to_remove.append(iv)
 
         # removing found iedges
         for iv in iedges_to_remove:
             self.__remove_iedge(iv)
+
+        # clean up empty dictionaries
+        if len(self._pred[u][v]) == 0:
+            self._pred[u].pop(v, None)
+        if len(self._succ[v][u]) == 0:
+            self._succ[v].pop(u, None)
+        if len(self._pred[u]) == 0:
+            self._pred.pop(u, None)
+        if len(self._succ[v]) == 0:
+            self._succ.pop(v, None)
 
     def degree(self, node=None, begin=None, end=None, delta=False):
         """Return the degree of a specified node between time begin and end.
@@ -788,9 +806,8 @@ class IntervalDiGraph(IntervalGraph):
         >>> G.__remove_iedge(iedge)
         """
         self.tree.remove(iedge)
-        self._pred[iedge[0]].pop(iedge, None)
-        self._succ[iedge[1]].pop(iedge, None)
-
+        self._pred[iedge[0]][iedge[1]].pop(iedge, None)
+        self._succ[iedge[1]][iedge[0]].pop(iedge, None)
 
     @staticmethod
     def __overlaps_or_contains(iv, begin, end):

@@ -604,8 +604,11 @@ class IntervalGraph(object):
             return
 
         if begin is None and end is None:
-            for iedge in list(self._adj[n].keys()):
-                self.__remove_iedge(iedge)
+            self._adj.pop(n, None)
+            for v in self._adj:
+                if n in self._adj[v]:
+                    self._adj[v].pop(n, None)
+
         else:
             iedges = self.tree[begin:end]
             for iedge in iedges:
@@ -613,7 +616,7 @@ class IntervalGraph(object):
                     self.__remove_iedge(iedge)
 
         # delete the node and its attributes if no edge left
-        if len(self._adj[n]) == 0:
+        if n not in self._adj or len(self._adj[n]) == 0:
             self._adj.pop(n, None)
             self._node.pop(n, None)
 
@@ -670,16 +673,16 @@ class IntervalGraph(object):
         >>> G.add_edge(1, 3, 4, 9, weight=7, capacity=15, length=342.7)
         """
 
-        if u in self._adj and (u, v, begin, end) in self._adj[u]:
-            # since both point to the same attr, updating one is enough
-            self._adj[u][(u, v, begin, end)].update(attr)
+        if u in self._adj and v in self._adj[u] and (u, v, begin, end) in self._adj[u][v]:
+            self._adj[u][v][(u, v, begin, end)].update(attr)
+            self._adj[v][u][(u, v, begin, end)].update(attr)
             return
 
         iedge = (u, v, begin, end)
 
         # add nodes
-        self._adj.setdefault(u, {})
-        self._adj.setdefault(v, {})
+        self._adj.setdefault(u, {}).setdefault(v, {})
+        self._adj.setdefault(v, {}).setdefault(u, {})
         self._node.setdefault(u, {})
         self._node.setdefault(v, {})
 
@@ -689,7 +692,7 @@ class IntervalGraph(object):
         except ValueError:
             raise NetworkXError("IntervalGraph: edge duration must be strictly bigger than zero {0}.".format(iedge))
 
-        self._adj[u][iedge] = self._adj[v][iedge] = attr
+        self._adj[u][v][iedge] = self._adj[v][u][iedge] = attr
 
     def add_edges_from(self, ebunch_to_add, **attr):
         """Add all the edges in ebunch_to_add.
@@ -779,11 +782,14 @@ class IntervalGraph(object):
         >>> G.has_edge(2, 4, begin=2, end=11)
         False
         """
+        if u not in self._adj:
+            return False
+        if v not in self._adj[u]:
+            return False
 
         if begin is None and end is None:
-            for iv in self._adj[u].keys():
-                if iv[0] == v or iv[1] == v:
-                    return True
+            if v in self._adj[u]:
+                return True
             return False
 
         if not overlapping:
@@ -796,8 +802,8 @@ class IntervalGraph(object):
             raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
-        for iv in self._adj[u].keys():
-            if (iv[0] == v or iv[1] == v) and self.__overlaps_or_contains(iv, begin, end):
+        for iv in self._adj[u][v]:
+            if self.__overlaps_or_contains(iv, begin, end):
                 return True
         return False
 
@@ -903,18 +909,18 @@ class IntervalGraph(object):
             if u and v:
                 if u not in self._adj:
                     return []
-                if v not in self._adj:
+                if v not in self._adj[u]:
                     return []
+                iedges = self._adj[u][v]
 
-                iedges = [iv for iv in self._adj[u].keys() if iv[1] == v]
             elif u is not None:
                 if u not in self._adj:
                     return []
-                iedges = self._adj[u].keys()
+                iedges = [iv for v in self._adj[u] for iv in self._adj[u][v]]
             else:
                 if v not in self._adj:
                     return []
-                iedges = self._adj[v].keys()
+                iedges = [iv for u in self._adj[v] for iv in self._adj[v][u]]
 
             # Interval filtering
             if begin and end and begin > end:
@@ -927,10 +933,9 @@ class IntervalGraph(object):
             return iedges if isinstance(iedges, list) else list(iedges)
 
         if data is True:
-            return [(iv, self._adj[iv[0]][iv]) for iv in iedges]
+            return [(iv, self._adj[iv[0]][iv[1]][iv]) for iv in iedges]
 
-        return [(iv, self._adj[iv[0]][iv][data]) if data in self._adj[iv[0]][iv].keys() else
-                (iv, default) for iv in iedges]
+        return [(iv, self._adj[iv[0]][iv[1]][iv][data]) if data in self._adj[iv[0]][iv[1]][iv] else (iv, default) for iv in iedges]
 
     def remove_edge(self, u, v, begin=None, end=None, overlapping=True):
         """Remove the edge between u and v in the interval graph,
@@ -985,6 +990,10 @@ class IntervalGraph(object):
         >>> G.has_edge(2, 4, begin=1, end=11)
         False
         """
+
+        if u not in self._adj or v not in self._adj[u]:
+            return
+
         # remove edge between u and v with the exact given interval
         if not overlapping:
             if begin is None or end is None:
@@ -999,22 +1008,32 @@ class IntervalGraph(object):
 
         # remove every edge between u and v
         if begin is None and end is None:
-            for iv in self._adj[u].keys():
-                if iv[0] == v or iv[1] == v:
-                    iedges_to_remove.append(iv)
+            for iv in self._adj[u][v]:
+                iedges_to_remove.append(iv)
 
         # remove edge between u and v with overlapping interval with the given interval
-        if begin and end and begin > end:
-            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+        else:
+            if begin and end and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
-        for iv in self._adj[u].keys():
-            if (iv[0] == v or iv[1] == v) and IntervalGraph.__overlaps_or_contains(iv, begin, end):
-                iedges_to_remove.append(iv)
+            for iv in self._adj[u][v]:
+                if IntervalGraph.__overlaps_or_contains(iv, begin, end):
+                    iedges_to_remove.append(iv)
 
         # removing found iedges
         for iv in iedges_to_remove:
             self.__remove_iedge(iv)
+
+        # clean up empty dictionaries
+        if len(self._adj[u][v]) == 0:
+            self._adj[u].pop(v, None)
+        if len(self._adj[v][u]) == 0:
+            self._adj[v].pop(u, None)
+        if len(self._adj[u]) == 0:
+            self._adj.pop(u, None)
+        if len(self._adj[v]) == 0:
+            self._adj.pop(v, None)
 
     def degree(self, node=None, begin=None, end=None, delta=False):
         """Return the degree of a specified node between time begin and end.
@@ -1108,12 +1127,13 @@ class IntervalGraph(object):
         --------
         >>> G = dnx.IntervalGraph()
         >>> G.add_edge(1, 2, 3, 10)
-        >>> iedge = (1, 2, 3 4)
+        >>> iedge = (1, 2, 3, 10)
         >>> G.__remove_iedge(iedge)
         """
+
         self.tree.remove(iedge)
-        self._adj[iedge[0]].pop(iedge, None)
-        self._adj[iedge[1]].pop(iedge, None)
+        self._adj[iedge[0]][iedge[1]].pop(iedge, None)
+        self._adj[iedge[1]][iedge[0]].pop(iedge, None)
 
     @staticmethod
     def __overlaps_or_contains(iv, begin, end):
@@ -1212,8 +1232,7 @@ class IntervalGraph(object):
                               dict(self._adj[iedge[0]][iedge], begin=iedge.begin, end=iedge.end))
                              for iedge in iedges)
         elif edge_data:
-            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge].copy())
-                             for iedge in iedges)
+            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge[1]][iedge].copy()) for iedge in iedges)
         elif edge_interval_data:
             G.add_edges_from((iedge[0], iedge[1], {'begin': iedge[2], 'end': iedge[3]})
                              for iedge in iedges)

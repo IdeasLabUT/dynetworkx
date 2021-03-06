@@ -152,7 +152,7 @@ def test_intervalgraph_add_edge():
     G.add_edge(1, 2, 3, 4)
     G.add_edge(1, 3, 4, 5, weight=7, capacity=15, length=342.7)
 
-    assert list(G.edges(data=True)) == [ ((1, 2, 3, 4), {}), ((1, 3, 4, 5), {'capacity': 15, 'length': 342.7, 'weight': 7})]
+    assert list(G.edges(data=True)) == [((1, 2, 3, 4), {}), ((1, 3, 4, 5), {'capacity': 15, 'length': 342.7, 'weight': 7})]
 
 
 def test_intervalgraph_add_edges_from():
