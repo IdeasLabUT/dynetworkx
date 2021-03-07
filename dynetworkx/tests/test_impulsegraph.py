@@ -24,7 +24,6 @@ def test_impulsegraph_init_default():
     assert G._node == {}
     assert G._adj == {}
     assert G.name == ''
-    assert G.edgeid == 0
 
 
 def test_impulsegraph_init_name():

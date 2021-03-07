@@ -782,15 +782,11 @@ class IntervalGraph(object):
         >>> G.has_edge(2, 4, begin=2, end=11)
         False
         """
-        if u not in self._adj:
-            return False
-        if v not in self._adj[u]:
+        if u not in self._adj or v not in self._adj[u]:
             return False
 
         if begin is None and end is None:
-            if v in self._adj[u]:
-                return True
-            return False
+            return True
 
         if not overlapping:
             if begin is None or end is None:
@@ -895,8 +891,8 @@ class IntervalGraph(object):
         # otherwise the edges are returned based on the nodes in the self._adj.
 
         if not u and not v:
-            if not begin and not end:
-                iedges = self.tree[None:None]
+            if not begin or not end:
+                iedges = self.tree[begin:end]
             # interval filtering
             else:
                 if begin and end and begin > end:

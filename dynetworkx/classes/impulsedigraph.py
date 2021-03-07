@@ -182,15 +182,12 @@ class ImpulseDiGraph(ImpulseGraph):
         >>> G.add_edge(1, 3, 9, weight=7, capacity=15, length=342.7)
         """
 
-        eid = self.edgeid
-        self.tree.setdefault(t, set()).add((u, v, eid))
+        self.tree.setdefault(t, set()).add((u, v))
 
         self._node.setdefault(u, {})
         self._node.setdefault(v, {})
-        self._pred.setdefault(u, {})[(u, v, eid, t)] = attr
-        self._succ.setdefault(v, {})[(u, v, eid, t)] = attr
-
-        self.edgeid += 1
+        self._pred.setdefault(u, {}).setdefault(v, {})[(u, v, t)] = attr
+        self._succ.setdefault(v, {}).setdefault(u, {})[(u, v, t)] = attr
 
     def add_edges_from(self, ebunch_to_add, **attr):
         """Add all the edges in ebunch_to_add.
@@ -256,16 +253,18 @@ class ImpulseDiGraph(ImpulseGraph):
         False
         """
 
-        if begin is None and end is None:
-            for edge in self._pred[u].keys():
-                if edge[1] == v:
-                    return True
+        if u not in self._pred or v not in self._pred[u]:
             return False
 
-        begin, end = self.__validate_interval(begin, end)
+        if begin is None and end is None:
+            return True
 
-        for edge in self._pred[u].keys():
-            if edge[1] == v and self.__in_interval(edge[3], begin, end, inclusive=inclusive):
+        if begin and end and begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
+
+        for iv in self._pred[u][v]:
+            if self.__in_interval(iv[2], begin, end, inclusive=inclusive):
                 return True
         return False
 
@@ -352,25 +351,51 @@ class ImpulseDiGraph(ImpulseGraph):
         [((1, 3, 4), 8)]
         """
 
-        iedges = []
-        for edge in self.__search_tree(begin, end, inclusive=inclusive):
-            if u is not None and v is not None and u == edge[0] and v == edge[1]:
-                iedges.append(edge)
-            elif (u is not None and v is None) and u == edge[0]:
-                iedges.append(edge)
-            elif (u is None and v is not None) and v == edge[1]:
-                iedges.append(edge)
-            elif u is None and v is None:
-                iedges.append(edge)
+        if begin is None:
+            inclusive = (True, inclusive[1])
+        if end is None:
+            inclusive = (inclusive[0], True)
+
+        if not u and not v:
+            if not begin or not end:
+                iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
+            # interval filtering
+            else:
+                if begin and end and begin > end:
+                    raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                        "begin: {}, end: {}.".format(begin, end))
+                iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
+
+        else:
+            # Node filtering
+            if u and v:
+                if u not in self._pred:
+                    return []
+                if v not in self._pred[u]:
+                    return []
+                iedges = self._pred[u][v]
+
+            elif u is not None:
+                if u not in self._pred:
+                    return []
+                iedges = [iv for v in self._pred[u] for iv in self._pred[u][v]]
+            else:
+                if v not in self._succ:
+                    return []
+                iedges = [iv for u in self._succ[v] for iv in self._succ[v][u]]
+
+            # Interval filtering
+            if begin and end and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
+            iedges = [iv for iv in iedges if self.__in_interval(iv[2], begin, end, inclusive=inclusive)]
 
         if data is False:
-            return [(edge[0], edge[1], edge[3]) for edge in iedges]
+            return [edge for edge in iedges]
 
         if data is True:
-            return [((edge[0], edge[1], edge[3]), self._pred[edge[0]][edge]) for edge in iedges]
-
-        return [((edge[0], edge[1], edge[3]), self._pred[edge[0]][edge][data]) if data in self._pred[edge[0]][edge]
-                else ((edge[0], edge[1], edge[3]), default) for edge in iedges]
+            return [(edge, self._pred[edge[0]][edge[1]][edge]) for edge in iedges]
+        return [(edge, self._pred[edge[0]][edge[1]][edge][data]) if data in self._pred[edge[0]][edge[1]][edge] else (edge, default) for edge in iedges]
 
     def remove_edge(self, u, v, begin=None, end=None, inclusive=(True, True)):
         """Remove the edge between u and v in the impulse graph,
@@ -405,13 +430,34 @@ class ImpulseDiGraph(ImpulseGraph):
         True
         """
 
-        iedges = []
-        for edge in self.__search_tree(begin, end, inclusive=inclusive):
-            if u == edge[0] and v == edge[1]:
-                iedges.append(edge)
+        if u not in self._pred or v not in self._pred[u]:
+            return
 
-        for edge in iedges:
+        iedges_to_remove = []
+
+        # remove every edge between u and v
+        if begin is None and end is None:
+            for iv in self._pred[u][v]:
+                iedges_to_remove.append(iv)
+
+        else:
+            for iv in self._pred[u][v]:
+                if self.__in_interval(iv[2], begin, end):
+                    iedges_to_remove.append(iv)
+
+        # removing found iedges
+        for edge in iedges_to_remove:
             self.__remove_iedge(edge)
+
+        # clean up empty dictionaries
+        if len(self._pred[u][v]) == 0:
+            self._pred[u].pop(v, None)
+        if len(self._succ[v][u]) == 0:
+            self._succ[v].pop(u, None)
+        if len(self._pred[u]) == 0:
+            self._pred.pop(u, None)
+        if len(self._succ[v]) == 0:
+            self._succ.pop(v, None)
 
     def degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, True)):
         """Return the sum of in and out degree of a specified node between time begin and end.
@@ -618,14 +664,14 @@ class ImpulseDiGraph(ImpulseGraph):
         return output
 
     def to_networkx_graph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
-                    edge_timestamp_data=False, node_data=False):
+                          edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.
 
         Wrapper function for ImpulseGraph.to_subgraph. Refer to ImpulseGraph.to_subgraph for full description.
         """
-        return self.to_subgraph(begin=begin, end=end, inclusive=inclusive, multigraph=multigraph, edge_data=edge_data, edge_timestamp_data=edge_timestamp_data, node_data=node_data)
-
+        return self.to_subgraph(begin=begin, end=end, inclusive=inclusive, multigraph=multigraph, edge_data=edge_data,
+                                edge_timestamp_data=edge_timestamp_data, node_data=node_data)
 
     def to_subgraph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
                     edge_timestamp_data=False, node_data=False):
@@ -718,15 +764,10 @@ class ImpulseDiGraph(ImpulseGraph):
             Edge to be removed.
         """
 
-        u = iedge[0]
-        v = iedge[1]
-        eid = iedge[2]
-        t = iedge[3]
-
         try:
-            self.tree[t].remove((u, v, eid))
-            del self._pred[u][iedge]
-            del self._succ[v][iedge]
+            self.tree[iedge[2]].remove((iedge[0], iedge[1]))
+            del self._pred[iedge[0]][iedge[1]][iedge]
+            del self._succ[iedge[1]][iedge[0]][iedge]
         except:
             return
 

@@ -126,7 +126,6 @@ class ImpulseGraph(object):
         self.graph = {}  # dictionary for graph attributes
         self._node = {}
         self._adj = {}
-        self.edgeid = 0
 
         self.graph.update(attr)
 
@@ -206,7 +205,7 @@ class ImpulseGraph(object):
         """
         if len(self.tree.keys()) == 0:
             raise IndexError("ImpulseGraph is empty.")
-        return self.tree.keys()[0], self.tree.keys()[-1]
+        return list(self.tree.keys())[0], list(self.tree.keys())[-1]
 
     def add_node(self, node_for_adding, **attr):
         """Add a single node `node_for_adding` and update node attributes.
@@ -495,20 +494,23 @@ class ImpulseGraph(object):
             return
 
         if begin is None and end is None:
-            for iedge in list(self._adj[n].keys()):
-                self.__remove_iedge(iedge)
+            self._adj.pop(n, None)
+            for v in self._adj:
+                if n in self._adj[v]:
+                    self._adj[v].pop(n, None)
+
         else:
             remove_edges = []
-            for edge in self.__search_tree(begin, end, inclusive=inclusive):
+            for edge in self.__search_tree(begin, end, inclusive):
                 if edge[0] == n or edge[1] == n:
                     remove_edges.append(edge)
             for edge in remove_edges:
                 self.__remove_iedge(edge)
 
         # delete the node and its attributes if no edge left
-        if len(self._adj[n]) == 0:
-            del self._adj[n]
-            del self._node[n]
+        if n not in self._adj or len(self._adj[n]) == 0:
+            self._adj.pop(n, None)
+            self._node.pop(n, None)
 
     def add_edge(self, u, v, t, **attr):
         """Add an edge between u and v, at t.
@@ -561,15 +563,12 @@ class ImpulseGraph(object):
         >>> G.add_edge(1, 3, 9, weight=7, capacity=15, length=342.7)
         """
 
-        eid = self.edgeid
-        self.tree.setdefault(t, set()).add((u, v, eid))
+        self.tree.setdefault(t, set()).add((u, v))
 
         self._node.setdefault(u, {})
         self._node.setdefault(v, {})
-        self._adj.setdefault(u, {})[(u, v, eid, t)] = attr
-        self._adj.setdefault(v, {})[(u, v, eid, t)] = attr
-
-        self.edgeid += 1
+        self._adj.setdefault(u, {}).setdefault(v, {})[(u, v, t)] = attr
+        self._adj.setdefault(v, {}).setdefault(u, {})[(u, v, t)] = attr
 
     def add_edges_from(self, ebunch_to_add, **attr):
         """Add all the edges in ebunch_to_add.
@@ -634,17 +633,18 @@ class ImpulseGraph(object):
         >>> G.has_edge(2, 4, begin=12)
         False
         """
-
-        if begin is None and end is None:
-            for edge in self._adj[u].keys():
-                if edge[1] == v:
-                    return True
+        if u not in self._adj or v not in self._adj[u]:
             return False
 
-        begin, end = self.__validate_interval(begin, end)
+        if begin is None and end is None:
+            return True
 
-        for edge in self._adj[u].keys():
-            if edge[1] == v and self.__in_interval(edge[3], begin, end, inclusive=inclusive):
+        if begin and end and begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
+
+        for iv in self._adj[u][v]:
+            if self.__in_interval(iv[2], begin, end, inclusive=inclusive):
                 return True
         return False
 
@@ -731,28 +731,51 @@ class ImpulseGraph(object):
         [((1, 3, 4), 8)]
         """
 
-        iedges = []
+        if begin is None:
+            inclusive = (True, inclusive[1])
         if end is None:
             inclusive = (inclusive[0], True)
 
-        for edge in self.__search_tree(begin, end, inclusive=inclusive):
-            if u is not None and v is not None and u == edge[0] and v == edge[1]:
-                iedges.append(edge)
-            elif (u is not None and v is None) and (u == edge[0] or u == edge[1]):
-                iedges.append(edge)
-            elif (u is None and v is not None) and (v == edge[0] or v == edge[1]):
-                iedges.append(edge)
-            elif u is None and v is None:
-                iedges.append(edge)
+        if not u and not v:
+            if not begin or not end:
+                iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
+            # interval filtering
+            else:
+                if begin and end and begin > end:
+                    raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                        "begin: {}, end: {}.".format(begin, end))
+                iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
+
+        else:
+            # Node filtering
+            if u and v:
+                if u not in self._adj:
+                    return []
+                if v not in self._adj[u]:
+                    return []
+                iedges = self._adj[u][v]
+
+            elif u is not None:
+                if u not in self._adj:
+                    return []
+                iedges = [iv for v in self._adj[u] for iv in self._adj[u][v]]
+            else:
+                if v not in self._adj:
+                    return []
+                iedges = [iv for u in self._adj[v] for iv in self._adj[v][u]]
+
+            # Interval filtering
+            if begin and end and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
+            iedges = [iv for iv in iedges if self.__in_interval(iv[2], begin, end, inclusive=inclusive)]
 
         if data is False:
-            return [(edge[0], edge[1], edge[3]) for edge in iedges]
+            return [edge for edge in iedges]
 
         if data is True:
-            return [((edge[0], edge[1], edge[3]), self._adj[edge[0]][edge]) for edge in iedges]
-
-        return [((edge[0], edge[1], edge[3]), self._adj[edge[0]][edge][data]) if data in self._adj[edge[0]][edge]
-                else ((edge[0], edge[1], edge[3]), default) for edge in iedges]
+            return [(edge, self._adj[edge[0]][edge[1]][edge]) for edge in iedges]
+        return [(edge, self._adj[edge[0]][edge[1]][edge][data]) if data in self._adj[edge[0]][edge[1]][edge] else (edge, default) for edge in iedges]
 
     def remove_edge(self, u, v, begin=None, end=None, inclusive=(True, False)):
         """Remove the edge between u and v in the impulse graph,
@@ -787,13 +810,34 @@ class ImpulseGraph(object):
         True
         """
 
-        iedges = []
-        for edge in self.__search_tree(begin, end, inclusive=inclusive):
-            if u == edge[0] and v == edge[1]:
-                iedges.append(edge)
+        if u not in self._adj or v not in self._adj[u]:
+            return
 
-        for edge in iedges:
+        iedges_to_remove = []
+
+        # remove every edge between u and v
+        if begin is None and end is None:
+            for iv in self._adj[u][v]:
+                iedges_to_remove.append(iv)
+
+        else:
+            for iv in self._adj[u][v]:
+                if self.__in_interval(iv[2], begin, end):
+                    iedges_to_remove.append(iv)
+
+        # removing found iedges
+        for edge in iedges_to_remove:
             self.__remove_iedge(edge)
+
+        # clean up empty dictionaries
+        if len(self._adj[u][v]) == 0:
+            self._adj[u].pop(v, None)
+        if len(self._adj[v][u]) == 0:
+            self._adj[v].pop(u, None)
+        if len(self._adj[u]) == 0:
+            self._adj.pop(u, None)
+        if len(self._adj[v]) == 0:
+            self._adj.pop(v, None)
 
     def degree(self, node=None, begin=None, end=None, delta=False, inclusive=(True, False)):
         """Return the degree of a specified node between time begin and end.
@@ -874,18 +918,13 @@ class ImpulseGraph(object):
         iedge : Edge Tuple (u,v,eid,t)
             Edge to be removed.
         """
-
-        u = iedge[0]
-        v = iedge[1]
-        eid = iedge[2]
-        t = iedge[3]
-
         try:
-            self.tree[t].remove((u, v, eid))
-            del self._adj[u][iedge]
-            del self._adj[v][iedge]
+            self.tree[iedge[2]].remove((iedge[0], iedge[1]))
+            del self._adj[iedge[0]][iedge[1]][iedge]
+            del self._adj[iedge[1]][iedge[0]][iedge]
         except:
             return
+        print(self._adj)
 
     def __validate_interval(self, begin=None, end=None):
         """Returns validated begin and end.
@@ -954,16 +993,15 @@ class ImpulseGraph(object):
         if inclusive == (False, False):
             return t > begin and t < end
 
-
     def to_networkx_graph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
-                    edge_timestamp_data=False, node_data=False):
+                          edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.
 
         Wrapper function for ImpulseGraph.to_subgraph. Refer to ImpulseGraph.to_subgraph for full description.
         """
-        return self.to_subgraph(begin=begin, end=end, inclusive=inclusive, multigraph=multigraph, edge_data=edge_data, edge_timestamp_data=edge_timestamp_data, node_data=node_data)
-
+        return self.to_subgraph(begin=begin, end=end, inclusive=inclusive, multigraph=multigraph, edge_data=edge_data,
+                                edge_timestamp_data=edge_timestamp_data, node_data=node_data)
 
     def to_subgraph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
                     edge_timestamp_data=False, node_data=False):
@@ -1031,10 +1069,10 @@ class ImpulseGraph(object):
             G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[3]))
                              for iedge in iedges)
         elif edge_data:
-            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge])
+            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge[1]][iedge])
                              for iedge in iedges)
         elif edge_timestamp_data:
-            G.add_edges_from((iedge[0], iedge[1], {'timestamp': iedge[3]})
+            G.add_edges_from((iedge[0], iedge[1], {'timestamp': iedge[2]})
                              for iedge in iedges)
         else:
 
@@ -1152,7 +1190,7 @@ class ImpulseGraph(object):
         return snapshots
 
     def to_snapshot_graph(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False, edge_timestamp_data=False,
-                     node_data=False, return_length=False):
+                          node_data=False, return_length=False):
         """
         Return a dnx.SnapshotGraph of the impulse graph.
 
@@ -1233,7 +1271,6 @@ class ImpulseGraph(object):
                 G.insert(snapshot)
 
             return G
-
 
     @staticmethod
     def from_networkx_graph(graph, timestamp='timestamp'):

@@ -17,7 +17,6 @@ class Node:
     def inInterval(self, begin, end):
         return (self.low < end and self.high > begin) or self.low == begin
 
-
 class IntervalTree:
 
     def __init__(self):
