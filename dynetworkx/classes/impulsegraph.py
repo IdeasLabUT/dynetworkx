@@ -1189,19 +1189,12 @@ class ImpulseGraph(object):
 
         return snapshots
 
-    def to_snapshot_graph(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False, edge_timestamp_data=False,
-                          node_data=False, return_length=False):
+    def to_snapshot_graph(self, multigraph=False, edge_data=False, edge_timestamp_data=False, node_data=False):
         """
         Return a dnx.SnapshotGraph of the impulse graph.
 
         Parameters
         ----------
-        number_of_snapshots : integer
-            Number of snapshots to divide the interval graph into.
-            Must be bigger than 2.
-        length_of_snapshots : integer or float
-            Length of snapshots to divide the interval graph into.
-            Must be bigger than 1.
         multigraph : bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
         edge_data: bool, optional (default= False)
@@ -1212,8 +1205,6 @@ class ImpulseGraph(object):
             it will be overwritten.
         node_data : bool, optional (default= False)
             if True, each node's attributes will be included.
-        return_length : bool, optional (default= False)
-            If true, the length of snapshots will be returned as the second argument.
 
         See Also
         --------
@@ -1231,46 +1222,33 @@ class ImpulseGraph(object):
         Snapshots of NetworkX Graph
 
         >>> G = dnx.ImpulseGraph()
-        >>> G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
-        >>> S, l = G.to_snapshot_graph(2, edge_timestamp_data=True, return_length=True)
+        >>> G.add_edges_from([(1, 2, 10), (2, 3, 11), (2, 4, 11), (4, 6, 19)])
+        >>> S = G.to_snapshot_graph(edge_timestamp_data=True)
         >>> for g in S:
         >>> ... g.edges(data=True))
-        [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
-        [(2, 4, {'timestamp': 15}), (4, 6, {'timestamp': 19})]
+        [(1, 2, {'timestamp': 10})]
+        [(2, 3, {'timestamp': 11}), (2, 4, {'timestamp': 11})]
+        [(4, 6, {'timestamp': 19})]
 
         Snapshots of NetworkX MultiGraph
 
-        >>> S, l = G.to_snapshot_graph(3, multigraph=True, edge_timestamp_data=True, return_length=True)
+        >>> S = G.to_snapshot_graph(multigraph=True, edge_timestamp_data=True)
         >>> for g in S:
         >>> ... g.edges(data=True))
-        [(1, 2, {'timestamp': 10}), (2, 4, {'timestamp': 11})]
-        [(2, 4, {'timestamp': 15})]
-        [(6, 4, {'timestamp': 19})]
+        [(1, 2, {'timestamp': 10}), (1, 2, {'timestamp': 10})]
+        [(2, 3, {'timestamp': 11}), (2, 3, {'timestamp': 11}), (2, 4, {'timestamp': 11}), (2, 4, {'timestamp': 11})]
+        [(4, 6, {'timestamp': 19}), (4, 6, {'timestamp': 19})]
         """
 
         G = dnx.SnapshotGraph()
 
-        if return_length == True:
-            snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
-                                             length_of_snapshots=length_of_snapshots,
-                                             multigraph=multigraph, edge_data=edge_data,
-                                             edge_timestamp_data=edge_timestamp_data,
-                                             node_data=node_data, return_length=return_length)
-            for snapshot in snapshots:
-                G.insert(snapshot)
+        for time, snapshot in self.tree.items():
+            G.insert(graph=self.to_subgraph(time, time, inclusive=(True, True), multigraph=multigraph,
+                                            edge_data=edge_data, edge_timestamp_data=edge_timestamp_data,
+                                            node_data=node_data),
+                     time=time)
 
-            return G, l
-
-        else:
-            snapshots = self.to_snapshots(number_of_snapshots=number_of_snapshots,
-                                          length_of_snapshots=length_of_snapshots,
-                                          multigraph=multigraph, edge_data=edge_data,
-                                          edge_timestamp_data=edge_timestamp_data,
-                                          node_data=node_data, return_length=return_length)
-            for snapshot in snapshots:
-                G.insert(snapshot)
-
-            return G
+        return G
 
     @staticmethod
     def from_networkx_graph(graph, timestamp='timestamp'):

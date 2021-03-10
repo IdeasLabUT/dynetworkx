@@ -433,6 +433,30 @@ def test_impulsegraph_to_subgraph_multigraph():
     assert isinstance(M, nx.classes.graph.Graph)
 
 
+def test_impulsegraph_to_snapshot_graph():
+    G = dnx.ImpulseGraph()
+    G.add_edge(1, 2, 10)
+    G.add_edge(2, 3, 11)
+    G.add_edge(2, 4, 11)
+    G.add_edge(4, 6, 19)
+    S = G.to_snapshot_graph()
+
+    n1 = nx.Graph()
+    n1.add_edge(1, 2)
+
+    n2 = nx.Graph()
+    n2.add_edge(2, 3)
+    n2.add_edge(2, 4)
+
+    n3 = nx.Graph()
+    n3.add_edge(4, 6)
+
+    nl = [n1, n2, n3]
+
+    for i in range(len(S)):
+        assert list(S.snapshots.values()[i].edges(data=True)) == list(nl[i].edges(data=True))
+
+
 def test_impulsegraph_load_from_text_default():
     path = os.path.join(current_dir, 'inputoutput_text/impulsegraph_load_from_text_default.txt')
     desired = dnx.ImpulseGraph()
