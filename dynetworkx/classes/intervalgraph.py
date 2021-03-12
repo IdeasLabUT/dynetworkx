@@ -1349,20 +1349,12 @@ class IntervalGraph(object):
 
         return snapshots
 
-    def to_snapshot_graph(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False,
-                          edge_interval_data=False,
-                          node_data=False, return_length=False):
+    def to_snapshot_graph(self, multigraph=False, edge_data=False, edge_interval_data=False, node_data=False):
         """
         Return a dnx.SnapshotGraph of the interval graph.
 
         Parameters
         ----------
-        number_of_snapshots : integer
-            Number of snapshots to divide the interval graph into.
-            Must be bigger than 2.
-        length_of_snapshots : integer or float
-            Length of snapshots to divide the interval graph into.
-            Must be bigger than 1.
         multigraph : bool, optional (default= False)
             If True, a networkx MultiGraph will be returned. If False, networkx Graph.
         edge_data: bool, optional (default= False)
@@ -1373,9 +1365,6 @@ class IntervalGraph(object):
             it will be overwritten.
         node_data : bool, optional (default= False)
             if True, each node's attributes will be included.
-        return_length : bool, optional (default= False)
-            If true, the length of snapshots will be returned as the second argument.
-
         See Also
         --------
         to_snapshots : divide the interval graph to snapshots
@@ -1389,42 +1378,96 @@ class IntervalGraph(object):
 
         Examples
         --------
-        Snapshots of NetworkX Graph
+        Interval timestamps
 
         >>> G = dnx.IntervalGraph()
-        >>> G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])
-        >>> S, l = G.to_snapshot_graph(2, edge_interval_data=True, return_length=True)
+        >>> G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 15), (6, 4, 19, 20), (2, 4, 13, 16), (3, 2, 10, 11)])
+        >>> S = G.to_snapshot_graph(edge_interval_data=True)
         >>> for g in S:
         >>> ... g.edges(data=True))
-        [(1, 2, {'start_time': 10, 'end_time': 11}), (2, 4, {'start_time': 11, 'end_time': 12})]
-        [(2, 4, {'start_time': 15, 'end_time': 16}), (4, 6, {'start_time': 19, 'end_time': 20})]
+        [(1, 2, {'begin': 10, 'end': 11}), (2, 3, {'begin': 10, 'end': 11})]
+        [(2, 4, {'begin': 11, 'end': 15})]
+        [(2, 4, {'begin': 13, 'end': 16})]
+        [(2, 4, {'begin': 13, 'end': 16})]
+        []
+        [(6, 4, {'begin': 19, 'end': 20})]
 
-        Snapshots of NetworkX MultiGraph
+        Impulse timestamps
 
-        >>> S, l = G.to_snapshot_graph(3, multigraph=True, edge_timestamp_data=True, return_length=True)
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_edges_from([(1, 2, 11, 11), (2, 4, 15, 15), (6, 4, 19, 19)])
+        >>> S = G.to_snapshot_graph(edge_interval_data=True)
         >>> for g in S:
         >>> ... g.edges(data=True))
-        [(1, 2, {'start_time': 10, 'end_time': 11}), (2, 4, {'start_time': 11, 'end_time': 12})]
-        [(2, 4, {'start_time': 15, 'end_time': 16})]
-        [(4, 6, {'start_time': 19, 'end_time': 20})]
+        [(1, 2, {'begin': 11, 'end': 11})]
+        [(2, 4, {'begin': 15, 'end': 15})]
+        [(6, 4, {'begin': 19, 'end': 19})]
+
         """
 
         G = dnx.SnapshotGraph()
 
-        snapshots, l = self.to_snapshots(number_of_snapshots=number_of_snapshots,
-                                        length_of_snapshots=length_of_snapshots,
-                                        multigraph=multigraph, edge_data=edge_data,
-                                        edge_interval_data=edge_interval_data,
-                                        node_data=node_data, return_length=True)
+        # This algorithm slices the interval graph into different non-overlapped, consecutive snapshots and insert them
+        # into a snapshot graph. Snapshots' lengths are variable and each snapshot represents a change in a series edges
+        # E.g: 2 edges with time intervals [(2,5), (3,7)] will be split into 3 snapshots [(2,3), (3,5), (5, 7)]
 
-        for i in range(len(snapshots)):
-            end_inclusive_addition = 0
-            if i == number_of_snapshots - 1:
-                end_inclusive_addition = 1
-            G.insert(snapshots[i], start=self.tree.begin + l*i, end=self.tree.begin + l*(i+1) + end_inclusive_addition)
+        time = SortedList()  # this contains a list of sorted unique time stamp which will be used as "end" timestamp
+        # for each slice in following iterations
+        # We use a moving window specified by "begin" and "end" to slice each snapshots.
+        begin = None
+        for node in self.tree.inOrder(self.tree.root):
+            if node.low == node.high:  # this handles the case when someone uses interval graph as impulse graph
+                G.insert(graph=self.to_subgraph(begin=node.low, end=node.low, multigraph=multigraph, edge_data=edge_data
+                                                , edge_interval_data=edge_interval_data, node_data=node_data),
+                         time=node.low)
+            else:
+                if begin is None:
+                    begin = node.low
+                    time.add(node.high)
+                    continue
 
-        if return_length:
-            return G, l
+                if node.low == begin:
+                    time.add(node.high)
+                elif len(time) == 0 or node.low < time[0]:
+                    end = node.low
+                    time.add(node.high)
+                    G.insert(graph=self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data,
+                                                    edge_interval_data=edge_interval_data, node_data=node_data),
+                             start=begin, end=end)
+                    begin = end
+                elif node.low > time[0]:
+                    while node.low > time[0]:
+                        end = time.pop(0)
+                        G.insert(graph=self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data,
+                                                        edge_interval_data=edge_interval_data, node_data=node_data),
+                                 start=begin, end=end)
+                        begin = end
+
+                        if len(time) == 0:
+                            break
+
+                    end = node.low
+                    time.add(node.high)
+                    G.insert(graph=self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data,
+                                                    edge_interval_data=edge_interval_data, node_data=node_data),
+                             start=begin, end=end)
+                    begin = end
+                else:  # if node.low == time[0]
+                    end = time.pop(0)  # can use either "node.low" or "time[0]"
+                    time.add(node.high)
+                    G.insert(graph=self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data,
+                                                    edge_interval_data=edge_interval_data, node_data=node_data),
+                             start=begin, end=end)
+                    begin = end
+
+        # after finish iterating through all edges in the interval graph, which means all "start" timestamp has been
+        # iterated through, iterate through the remaining timestamps stored in "time"
+        for end in time:
+            G.insert(graph=self.to_subgraph(begin=begin, end=end, multigraph=multigraph, edge_data=edge_data,
+                                            edge_interval_data=edge_interval_data, node_data=node_data),
+                     start=begin, end=end)
+            begin = end
+
         return G
 
     @staticmethod

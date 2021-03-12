@@ -255,14 +255,31 @@ def test_intervalgraph_from_networkx_graph_timestamp():
 
 
 def test_intervalgraph_to_snapshot_graph():
+
+    # With interval edges
     G = dnx.IntervalGraph()
-    G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])
-    S, l = G.to_snapshot_graph(2, edge_interval_data=True, return_length=True)
+    G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 15), (6, 4, 19, 20), (2, 4, 13, 16), (3, 2, 10, 11)])
+    S = G.to_snapshot_graph(edge_data=False, edge_interval_data=True)
     actual = []
     for g in S:
         actual.append(g.edges(data=True))
-    assert list(actual[0]) == [(1, 2, {'begin': 10, 'end': 11}), (2, 4, {'begin': 11, 'end': 12})]
-    assert list(actual[1]) == [(2, 4, {'begin': 15, 'end': 16}), (4, 6, {'begin': 19, 'end': 20})]
+    assert list(actual[0]) == [(1, 2, {'begin': 10, 'end': 11}), (2, 3, {'begin': 10, 'end': 11})]
+    assert list(actual[1]) == [(2, 4, {'begin': 11, 'end': 15})]
+    assert list(actual[2]) == [(2, 4, {'begin': 13, 'end': 16})]
+    assert list(actual[3]) == [(2, 4, {'begin': 13, 'end': 16})]
+    assert list(actual[4]) == []
+    assert list(actual[5]) == [(6, 4, {'begin': 19, 'end': 20})]
+
+    # With impulse edges
+    G2 = dnx.IntervalGraph()
+    G2.add_edges_from([(1, 2, 11, 11), (2, 4, 15, 15), (6, 4, 19, 19)])
+    S2 = G2.to_snapshot_graph(edge_data=False, edge_interval_data=True)
+    actual2 = []
+    for g in S2:
+        actual2.append(g.edges(data=True))
+    assert list(actual2[0]) == [(1, 2, {'begin': 11, 'end': 11})]
+    assert list(actual2[1]) == [(2, 4, {'begin': 15, 'end': 15})]
+    assert list(actual2[2]) == [(6, 4, {'begin': 19, 'end': 19})]
 
 
 def test_intervalgraph_from_snapshots_default():
