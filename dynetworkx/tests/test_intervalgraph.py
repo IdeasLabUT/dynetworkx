@@ -423,6 +423,16 @@ def test_intervalgraph_to_subgraph_edge_interval_data():
     assert isinstance(H, nx.classes.graph.Graph)
 
 
+def test_intervalgraph_to_subgraph_edge_data_and_edge_interval_data():
+    G = dnx.IntervalGraph()
+    G.add_edges_from([(1, 2, 3, 6), (2, 4, 5, 11), (6, 4, 19, 20), (2, 4, 15, 16)], weight=1.5)
+    H = G.to_subgraph(4, 12, edge_data=True, edge_interval_data=True)
+
+    assert list(H.edges(data=True)) == [(1, 2, {'weight': 1.5, 'begin': 3, 'end': 6}),
+                                        (2, 4, {'weight': 1.5, 'begin': 5, 'end': 11})]
+    assert isinstance(H, nx.classes.graph.Graph)
+
+
 def test_intervalgraph_to_subgraph_multigraph():
     G = dnx.IntervalGraph()
     G.add_edges_from([(1, 2, 3, 6), (2, 4, 5, 11), (6, 4, 19, 20), (2, 4, 15, 16)])

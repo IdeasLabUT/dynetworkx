@@ -1225,7 +1225,7 @@ class IntervalGraph(object):
 
         if edge_data and edge_interval_data:
             G.add_edges_from((iedge[0], iedge[1],
-                              dict(self._adj[iedge[0]][iedge], begin=iedge.begin, end=iedge.end))
+                              dict(self._adj[iedge[0]][iedge[1]][iedge].copy(), begin=iedge[2], end=iedge[3]))
                              for iedge in iedges)
         elif edge_data:
             G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge[1]][iedge].copy()) for iedge in iedges)
