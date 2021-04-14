@@ -4,6 +4,11 @@ from networkx.exception import NetworkXError
 from sortedcontainers import SortedDict
 from networkx.classes.multigraph import MultiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
+import numpy as np
+import itertools
+import networkx as nx
+import time
+import random
 
 
 class ImpulseGraph(object):
@@ -993,7 +998,7 @@ class ImpulseGraph(object):
         if inclusive == (False, False):
             return t > begin and t < end
 
-    def to_networkx_graph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
+    def to_networkx_graph(self, begin=None, end=None, inclusive=(True, False), multigraph=False, edge_data=False,
                           edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.
@@ -1424,3 +1429,88 @@ class ImpulseGraph(object):
                 line += '\n'
 
                 file.write(line)
+
+    def enumerate_subgraphs(self, g, size_k):
+        for v in g.nodes():
+            v_extension = set(filter(lambda x: x > v, g.neighbors(v)))
+            yield from self.__extend_subgraph({v}, v_extension, v, g, size_k)
+
+    def __extend_subgraph(self, v_subgraph, v_extension, v, g, size_k):
+        if len(v_subgraph) == size_k:
+            yield g.subgraph(v_subgraph)
+        else:
+            while len(v_extension) != 0:
+                w = random.choice(tuple(v_extension))
+                v_extension.remove(w)
+
+                v2_extension = v_extension.copy().union(set(filter(lambda x: x > v,
+                                                                   set(g.neighbors(w)) - v_subgraph)))
+                yield from self.__extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
+
+    def calculate_temporal_motifs(self, sequence, delta):
+
+        total_counts = dict()
+
+        g = self.to_networkx_graph()
+        static_motif = Graph()
+        static_motif.add_edges_from(sequence)
+
+        for sub in self.enumerate_subgraphs(g, size_k=len(static_motif.nodes())):
+            if nx.is_isomorphic(sub, static_motif):
+                counts = dict()
+                edges = list()
+                for u, v in itertools.combinations(sub.nodes(), 2):
+                    edges.extend(self._adj[u].get(v).keys() if self._adj[u].get(v) is not None else [])
+                edges = sorted(edges, key=lambda x: x[2])
+
+                start = 0
+                for end in range(len(edges)):
+                    while edges[start][2] + delta < edges[end][2]:
+                        self.__decrement_counts(edges[start][0:2], len(sequence), counts)
+                        start += 1
+
+                    self.__increment_counts(edges[end][0:2], len(sequence), counts)
+
+                for keys in counts:
+                    if len(keys)/2 == len(sequence):
+                        if counts[keys] == 0:
+                            continue
+                        node_sequence = tuple(node for edge in sequence for node in edge)
+                        node_map = dict()
+                        isomorphic = True
+                        for n in range(len(node_sequence)):
+                            if node_map.get(node_sequence[n]):
+                                if node_map[node_sequence[n]] == keys[n]:
+                                    continue
+                                else:
+                                    isomorphic = False
+                                    break
+                            else:
+                                node_map[node_sequence[n]] = keys[n]
+
+                        if isomorphic:
+                            total_counts[keys] = counts[keys]
+
+        return sum(total_counts.values())
+
+    @staticmethod
+    def __decrement_counts(e, motif_length, counts):
+
+        counts[e] -= 1
+        for suffix in counts.keys():
+            if len(suffix)/2 < motif_length - 1:
+                if counts.get(e + suffix):
+                    counts[e + suffix] -= counts[suffix]
+
+    @staticmethod
+    def __increment_counts(e, motif_length, counts):
+        prefixes = reversed(list(counts.keys()))
+        for prefix in prefixes:
+            if len(prefix)/2 < motif_length:
+                if counts.get(prefix + e) is None:
+                    counts[prefix + e] = 0
+                counts[prefix + e] += counts[prefix]
+
+        if counts.get(e) is None:
+            counts[e] = 0
+        counts[e] += 1
