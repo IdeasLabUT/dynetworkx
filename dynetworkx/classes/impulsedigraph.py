@@ -4,6 +4,10 @@ from networkx.exception import NetworkXError
 from sortedcontainers import SortedDict, SortedList
 from networkx.classes.multidigraph import MultiDiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
+import random
+import itertools
+from networkx import Graph
+import networkx as nx
 
 
 class ImpulseDiGraph(ImpulseGraph):
@@ -663,7 +667,7 @@ class ImpulseDiGraph(ImpulseGraph):
 
         return output
 
-    def to_networkx_graph(self, begin, end, inclusive=(True, False), multigraph=False, edge_data=False,
+    def to_networkx_graph(self, begin=None, end=None, inclusive=(True, False), multigraph=False, edge_data=False,
                           edge_timestamp_data=False, node_data=False):
         """Return a networkx Graph or MultiGraph which includes all the nodes and
         edges which have timestamps within the given interval.
@@ -736,10 +740,10 @@ class ImpulseDiGraph(ImpulseGraph):
             G = DiGraph()
 
         if edge_data and edge_timestamp_data:
-            G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[3]))
+            G.add_edges_from((iedge[0], iedge[1], dict(self._pred[iedge[0]][iedge[1]][iedge], timestamp=iedge[3]))
                              for iedge in iedges)
         elif edge_data:
-            G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge])
+            G.add_edges_from((iedge[0], iedge[1], self._pred[iedge[0]][iedge[1]][iedge])
                              for iedge in iedges)
         elif edge_timestamp_data:
             G.add_edges_from((iedge[0], iedge[1], {'timestamp': iedge[3]})
@@ -837,3 +841,228 @@ class ImpulseDiGraph(ImpulseGraph):
             return begin < t <= end
         if inclusive == (False, False):
             return begin < t < end
+
+    @staticmethod
+    def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, order=('u', 'v', 't'), comments="#"):
+        """Read impulse graph in from path.
+           Timestamps must be integers or floats.
+           Nodes can be any hashable objects.
+           Edge Attributes can be assigned with in the following format: Key=Value
+
+        Parameters
+        ----------
+        path : string or file
+           Filename to read.
+
+        nodetype : Python type, optional (default= int)
+           Convert nodes to this type.
+
+        timestamptype : Python type, optional (default= float)
+        Convert timestamp to this type.
+        This must be an orderable type, ideally int or float. Other orderable types have not been fully tested.
+
+        order : Python 3-tuple, optional (default= ('u', 'v', 't'))
+        This must be a 3-tuple containing strings 'u', 'v', and 't'. 'u' specifies the starting node, 'v' the ending node, and 't' the timestamp.
+
+        comments : string, optional
+           Marker for comment lines
+
+        delimiter : string, optional
+           Separator for node labels.  The default is whitespace. Cannot be =.
+
+        Returns
+        -------
+        G: ImpulseGraph
+            The graph corresponding to the lines in edge list.
+
+        Examples
+        --------
+        >>> G=dnx.ImpulseGraph.load_from_txt("my_dygraph.txt")
+
+        The optional nodetype is a function to convert node strings to nodetype.
+
+        For example
+
+        >>> G=dnx.ImpulseGraph.load_from_txt("my_dygraph.txt", nodetype=int)
+
+        will attempt to convert all nodes to integer type.
+
+        Since nodes must be hashable, the function nodetype must return hashable
+        types (e.g. int, float, str, frozenset - or tuples of those, etc.)
+        """
+
+        G = ImpulseDiGraph()
+
+        if delimiter == '=':
+            raise ValueError("Delimiter cannot be =.")
+
+        if len(order) != 3 or 'u' not in order or 'v' not in order or 't' not in order:
+            raise ValueError("Order must be a 3-tuple containing strings 'u', 'v', and 't'.")
+
+        with open(path, 'r') as file:
+            for line in file:
+                p = line.find(comments)
+                if p >= 0:
+                    line = line[:p]
+                if not len(line):
+                    continue
+
+                line = line.rstrip().split(delimiter)
+
+                u = line[order.index('u')]
+                v = line[order.index('v')]
+                t = line[order.index('t')]
+
+                edgedata = {}
+                for data in line[3:]:
+                    key, value = data.split('=')
+
+                    try:
+                        value = float(value)
+                    except:
+                        pass
+                    edgedata[key] = value
+
+                if nodetype is not int:
+                    try:
+                        u = nodetype(u)
+                        v = nodetype(v)
+                    except:
+                        raise TypeError("Failed to convert node to {0}".format(nodetype))
+                else:
+                    try:
+                        u = int(u)
+                        v = int(v)
+                    except:
+                        pass
+
+                try:
+                    t = timestamptype(t)
+                except:
+                    raise TypeError("Failed to convert interval time to {}".format(timestamptype))
+
+                G.add_edge(u, v, t, **edgedata)
+
+        return G
+
+    def enumerate_subgraphs(self, g, size_k):
+        # vertices = sorted(g.nodes())
+        for v in g.nodes():
+            v_extension = set(filter(lambda x: x > v, g.neighbors(v)))
+            yield from self.__extend_subgraph({v}, v_extension, v, g, size_k)
+
+    def __extend_subgraph(self, v_subgraph, v_extension, v, g, size_k):
+        if len(v_subgraph) == size_k:
+            yield g.subgraph(v_subgraph)
+        else:
+            while len(v_extension) != 0:
+                w = random.choice(tuple(v_extension))
+                v_extension.remove(w)
+
+                v2_extension = v_extension.copy().union(set(filter(lambda x: x > v,
+                                                                   set(g.neighbors(w)) - v_subgraph)))
+                yield from self.__extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
+
+    def calculate_temporal_motifs(self, sequence, delta):
+        total_counts = dict()
+
+        # this is used later for checking matching sequences
+        node_sequence = tuple(node for edge in sequence for node in edge)
+
+        g = Graph(self.to_networkx_graph())
+        static_motif = Graph()
+        static_motif.add_edges_from(sequence)
+
+        for sub in self.enumerate_subgraphs(g, size_k=len(static_motif.nodes())):
+            if nx.is_isomorphic(sub, static_motif):
+                counts = dict()
+                edges = list()
+                for u, v in itertools.combinations(sub.nodes(), 2):
+                    edges.extend(self.edges(u, v))
+                    edges.extend(self.edges(v, u))
+
+                edges = sorted(edges, key=lambda x: x[2])
+
+                # Count all possible sequences from edges of the static subgraph
+                start = 0
+                end = 0
+                while end < len(edges):
+                    while edges[start][2] + delta < edges[end][2]:
+
+                        # combine all edges having the same timestamps to decrement counts
+                        tmp_time = edges[start][2]
+                        same_time_edges = list()
+
+                        while edges[start][2] == tmp_time:
+                            same_time_edges.append(edges[start][0:2])
+                            start += 1
+                            if start >= len(edges):
+                                break
+                        self.__decrement_counts(same_time_edges, len(sequence), counts)
+
+                    # combine all edges having the same timestamps to increment counts
+                    tmp_time = edges[end][2]
+                    same_time_edges = list()
+                    while edges[end][2] == tmp_time:
+                        same_time_edges.append(edges[end][0:2])
+                        end += 1
+                        if end >= len(edges):
+                            break
+
+                    self.__increment_counts(same_time_edges, len(sequence), counts)
+
+                # Extract out count for sequences that are isomorphic to the temporal motifs
+                for keys in sorted(counts.keys()):
+                    if len(keys)/2 == len(sequence):
+                        if counts[keys] == 0:
+                            continue
+
+                        node_map = dict()
+                        isomorphic = True
+                        # check matching sequences (node sequence vs key)
+                        for n in range(len(node_sequence)):
+                            if node_map.get(node_sequence[n]):
+                                if node_map[node_sequence[n]] == keys[n]:
+                                    continue
+                                else:
+                                    isomorphic = False
+                                    break
+                            else:
+                                if not keys[n] in node_map.values():
+                                    node_map[node_sequence[n]] = keys[n]
+                                else:
+                                    isomorphic = False
+                                    break
+                        if isomorphic:
+                            total_counts[keys] = counts[keys]
+
+        return sum(total_counts.values())
+
+    @staticmethod
+    def __decrement_counts(edges, motif_length, counts):
+
+        for e in edges:
+            counts[e] -= 1
+
+        suffixes = sorted(counts.keys(), key=len)
+        for suffix in suffixes:
+            if len(suffix)/2 < motif_length - 1:
+                for e in edges:
+                    if counts.get(e + suffix):
+                        counts[e + suffix] -= counts[suffix]
+
+    @staticmethod
+    def __increment_counts(edges, motif_length, counts):
+        # only loop through prefixes
+        prefixes = sorted(counts.keys(), key=len, reverse=True)
+        for prefix in prefixes:
+            if len(prefix)/2 < motif_length:
+                for e in edges:
+                    if counts.get(prefix + e) is None:
+                        counts[prefix + e] = 0
+                    counts[prefix + e] += counts[prefix]
+
+        for e in edges:
+            if counts.get(e) is None:
+                counts[e] = 0
+            counts[e] += 1
