@@ -963,7 +963,7 @@ class ImpulseDiGraph(ImpulseGraph):
                                                                    set(g.neighbors(w)) - v_subgraph)))
                 yield from self.__extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
 
-    def calculate_temporal_motifs(self, sequence, delta):
+    def calculate_temporal_motifs(self, sequence, delta, get_count_dict=False):
         total_counts = dict()
 
         # this is used later for checking matching sequences
@@ -1035,8 +1035,10 @@ class ImpulseDiGraph(ImpulseGraph):
                                     break
                         if isomorphic:
                             total_counts[keys] = counts[keys]
-
-        return sum(total_counts.values())
+        if get_count_dict:
+            return total_counts
+        else:
+            return sum(total_counts.values())
 
     @staticmethod
     def __decrement_counts(edges, motif_length, counts):
