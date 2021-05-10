@@ -8,6 +8,7 @@ import random
 import itertools
 from networkx import Graph
 import networkx as nx
+import re
 
 
 class ImpulseDiGraph(ImpulseGraph):
@@ -907,7 +908,7 @@ class ImpulseDiGraph(ImpulseGraph):
                 if not len(line):
                     continue
 
-                line = line.rstrip().split(delimiter)
+                line = re.split(delimiter+'+', line.strip())
 
                 u = line[order.index('u')]
                 v = line[order.index('v')]
@@ -963,108 +964,125 @@ class ImpulseDiGraph(ImpulseGraph):
                                                                    set(g.neighbors(w)) - v_subgraph)))
                 yield from self.__extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
 
-    def calculate_temporal_motifs(self, sequence, delta, get_count_dict=False):
+    def calculate_temporal_motifs(self, sequence, delta, get_count_dict=False, ignore_simultaneous_edges=False):
         total_counts = dict()
-
         # this is used later for checking matching sequences
         node_sequence = tuple(node for edge in sequence for node in edge)
-
         g = Graph(self.to_networkx_graph())
         static_motif = Graph()
         static_motif.add_edges_from(sequence)
 
         for sub in self.enumerate_subgraphs(g, size_k=len(static_motif.nodes())):
-            if nx.is_isomorphic(sub, static_motif):
-                counts = dict()
-                edges = list()
-                for u, v in itertools.combinations(sub.nodes(), 2):
-                    edges.extend(self.edges(u, v))
-                    edges.extend(self.edges(v, u))
+            # A way to check if nodes in sub may contain motif will help speed up. Using nx.is_isomorphic() will
+            # create error by dropping a lot of potential subgraphs.
+            counts = dict()
+            edges = list()
+            for u, v in itertools.combinations(sub.nodes(), 2):
+                edges.extend(self.edges(u, v))
+                edges.extend(self.edges(v, u))
 
-                edges = sorted(edges, key=lambda x: x[2])
+            # Motifs with self-loops won't be duplicated when iterating through subgraphs
+            for u in sub.nodes():
+                edges.extend(self.edges(u, u))
 
-                # Count all possible sequences from edges of the static subgraph
-                start = 0
-                end = 0
-                while end < len(edges):
-                    while edges[start][2] + delta < edges[end][2]:
+            edges = sorted(edges, key=lambda x: x[2])
+            # Count all possible sequences from edges of the static subgraph
+            start = 0
+            end = 0
+            while end < len(edges):
+                while edges[start][2] + delta < edges[end][2]:
 
-                        # combine all edges having the same timestamps to decrement counts
-                        tmp_time = edges[start][2]
-                        same_time_edges = list()
-
-                        while edges[start][2] == tmp_time:
-                            same_time_edges.append(edges[start][0:2])
-                            start += 1
-                            if start >= len(edges):
-                                break
-                        self.__decrement_counts(same_time_edges, len(sequence), counts)
-
-                    # combine all edges having the same timestamps to increment counts
-                    tmp_time = edges[end][2]
+                    # combine all edges having the same timestamps to decrement counts
+                    tmp_time = edges[start][2]
                     same_time_edges = list()
-                    while edges[end][2] == tmp_time:
-                        same_time_edges.append(edges[end][0:2])
-                        end += 1
-                        if end >= len(edges):
+
+                    while edges[start][2] == tmp_time:
+                        same_time_edges.append(edges[start][0:2])
+                        start += 1
+                        if start >= len(edges):
                             break
+                    self.__decrement_counts(same_time_edges, len(sequence), counts,
+                                            ignore_simultaneous_edges=ignore_simultaneous_edges)
 
-                    self.__increment_counts(same_time_edges, len(sequence), counts)
+                # combine all edges having the same timestamps to increment counts
+                tmp_time = edges[end][2]
+                same_time_edges = list()
+                while edges[end][2] == tmp_time:
+                    same_time_edges.append(edges[end][0:2])
+                    end += 1
+                    if end >= len(edges):
+                        break
 
-                # Extract out count for sequences that are isomorphic to the temporal motifs
-                for keys in sorted(counts.keys()):
-                    if len(keys)/2 == len(sequence):
-                        if counts[keys] == 0:
-                            continue
+                self.__increment_counts(same_time_edges, len(sequence), counts,
+                                        ignore_simultaneous_edges=ignore_simultaneous_edges)
 
-                        node_map = dict()
-                        isomorphic = True
-                        # check matching sequences (node sequence vs key)
-                        for n in range(len(node_sequence)):
-                            if node_map.get(node_sequence[n]):
-                                if node_map[node_sequence[n]] == keys[n]:
-                                    continue
-                                else:
-                                    isomorphic = False
-                                    break
+            # Extract out count for sequences that are isomorphic to the temporal motifs
+            for keys in sorted(counts.keys()):
+                if len(keys)/2 == len(sequence):
+                    if counts[keys] == 0:
+                        continue
+
+                    node_map = dict()
+                    isomorphic = True
+                    # check matching sequences (node sequence vs key)
+                    for n in range(len(node_sequence)):
+                        if node_map.get(node_sequence[n]):
+                            if node_map[node_sequence[n]] == keys[n]:
+                                continue
                             else:
-                                if not keys[n] in node_map.values():
-                                    node_map[node_sequence[n]] = keys[n]
-                                else:
-                                    isomorphic = False
-                                    break
-                        if isomorphic:
-                            total_counts[keys] = counts[keys]
+                                isomorphic = False
+                                break
+                        else:
+                            if not keys[n] in node_map.values():
+                                node_map[node_sequence[n]] = keys[n]
+                            else:
+                                isomorphic = False
+                                break
+                    if isomorphic:
+                        total_counts[keys] = counts[keys]
+
         if get_count_dict:
             return total_counts
         else:
             return sum(total_counts.values())
 
     @staticmethod
-    def __decrement_counts(edges, motif_length, counts):
-
-        for e in edges:
-            counts[e] -= 1
+    def __decrement_counts(edges, motif_length, counts, ignore_simultaneous_edges=False):
 
         suffixes = sorted(counts.keys(), key=len)
-        for suffix in suffixes:
-            if len(suffix)/2 < motif_length - 1:
-                for e in edges:
-                    if counts.get(e + suffix):
-                        counts[e + suffix] -= counts[suffix]
+        # count all permutations of edges that occur at the same timestamp
+        for i in range(len(edges)):
+            for e in edges:
+                counts[e] -= 1
+
+            for suffix in suffixes:
+                if len(suffix)/2 < motif_length - 1:
+                    for e in edges:
+                        if counts.get(e + suffix):
+                            counts[e + suffix] -= counts[suffix]
+
+            # if ignoring simultaneous edges because they don't form the motif's ordering, calculate the edges only once
+            if ignore_simultaneous_edges:
+                break
 
     @staticmethod
-    def __increment_counts(edges, motif_length, counts):
-        # only loop through prefixes
-        prefixes = sorted(counts.keys(), key=len, reverse=True)
-        for prefix in prefixes:
-            if len(prefix)/2 < motif_length:
-                for e in edges:
-                    if counts.get(prefix + e) is None:
-                        counts[prefix + e] = 0
-                    counts[prefix + e] += counts[prefix]
+    def __increment_counts(edges, motif_length, counts, ignore_simultaneous_edges=False):
 
-        for e in edges:
-            if counts.get(e) is None:
-                counts[e] = 0
-            counts[e] += 1
+        prefixes = sorted(counts.keys(), key=len, reverse=True)
+        # count all permutations of edges that occur at the same timestamp
+        for i in range(len(edges)):
+            for prefix in prefixes:
+                if len(prefix)/2 < motif_length:
+                    for e in edges:
+                        if counts.get(prefix + e) is None:
+                            counts[prefix + e] = 0
+                        counts[prefix + e] += counts[prefix]
+
+            for e in edges:
+                if counts.get(e) is None:
+                    counts[e] = 0
+                counts[e] += 1
+
+            # if ignoring simultaneous edges because they don't form the motif's ordering, calculate the edges only once
+            if ignore_simultaneous_edges:
+                break
