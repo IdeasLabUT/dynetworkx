@@ -180,6 +180,14 @@ def test_intervalgraph_edges_default():
     assert list(G.edges()) == [(3, 4, 5, 6)]
 
 
+def test_intervalgraph_edges_zero():
+    G = dnx.IntervalGraph()
+    G.add_edge(0, 4, 5, 6)
+    G.add_edge(3, 4, 5, 6)
+
+    assert list(G.edges(u=0)) == [(0, 4, 5, 6)]
+
+
 def test_intervalgraph_edges_slice():
     G = dnx.IntervalGraph()
     G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12), (6, 4, 19, 20), (2, 4, 15, 16)])

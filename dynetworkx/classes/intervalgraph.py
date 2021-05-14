@@ -890,25 +890,20 @@ class IntervalGraph(object):
         # If non of the nodes are defined the interval tree is queried for the list of edges,
         # otherwise the edges are returned based on the nodes in the self._adj.
 
-        if not u and not v:
-            if not begin or not end:
-                iedges = self.tree[begin:end]
-            # interval filtering
-            else:
-                if begin and end and begin > end:
-                    raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+        if u is None and v is None:
+            if begin is not None and end is not None and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                         "begin: {}, end: {}.".format(begin, end))
-                iedges = self.tree[begin:end]
+            iedges = self.tree[begin:end]
 
         else:
             # Node filtering
-            if u and v:
+            if u is not None and v is not None:
                 if u not in self._adj:
                     return []
                 if v not in self._adj[u]:
                     return []
                 iedges = self._adj[u][v]
-
             elif u is not None:
                 if u not in self._adj:
                     return []
@@ -919,7 +914,7 @@ class IntervalGraph(object):
                 iedges = [iv for u in self._adj[v] for iv in self._adj[v][u]]
 
             # Interval filtering
-            if begin and end and begin > end:
+            if begin is not None and end is not None and begin > end:
                 raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                     "begin: {}, end: {}.".format(begin, end))
             iedges = [iv for iv in iedges if IntervalGraph.__overlaps_or_contains(iv, begin, end)]
@@ -1144,11 +1139,11 @@ class IntervalGraph(object):
             Non-inclusive ending time of the node appearing in the interval graph.
             Must be bigger than or equal begin.
        """
-        if not begin and not end:
+        if begin is None and end is None:
             return True
-        if not begin:
+        if begin is None:
             return iv[2] < end
-        if not end:
+        if end is None:
             return iv[3] > begin
         return (iv[2] < end and iv[3] > begin) or iv[2] == begin
 

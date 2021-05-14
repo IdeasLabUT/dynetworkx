@@ -311,26 +311,21 @@ class IntervalDiGraph(IntervalGraph):
         # If non of the nodes are defined the interval tree is queried for the list of edges,
         # otherwise the edges are returned based on the nodes in the self._adj.o
 
-        if not u and not v:
-            if not begin and not end:
-                iedges = self.tree[None:None]
-            # interval filtering
-            else:
-                if begin and end and begin > end:
-                    raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
-                                        "begin: {}, end: {}.".format(begin, end))
-                iedges = self.tree[begin:end]
+        if u is None and v is None:
+            if begin is not None and end is not None and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
+            iedges = self.tree[begin:end]
 
         else:
             # Node filtering
-            if u and v:
+            if u is not None and v is not None:
                 if u not in self._pred:
                     return []
                 if v not in self._succ:
                     return []
-
                 iedges = self._pred[u][v]
-            elif u:
+            elif u is not None:
                 if u not in self._pred:
                     return []
                 iedges = [iv for v in self._pred[u] for iv in self._pred[u][v]]
@@ -340,7 +335,7 @@ class IntervalDiGraph(IntervalGraph):
                 iedges = [iv for u in self._succ[v] for iv in self._succ[v][u]]
 
             # Interval filtering
-            if begin and end and begin > end:
+            if begin is not None and end is not None and begin > end:
                 raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                     "begin: {}, end: {}.".format(begin, end))
             iedges = [iv for iv in iedges if IntervalDiGraph.__overlaps_or_contains(iv, begin, end)]
@@ -491,7 +486,7 @@ class IntervalDiGraph(IntervalGraph):
         """
 
         # no specified node, return mean degree
-        if node == None:
+        if node is None:
             n = 0
             l = 0
             for node in self.nodes(begin=begin, end=end):
@@ -500,14 +495,14 @@ class IntervalDiGraph(IntervalGraph):
             return l / n
 
         # specified node, no degree_change, return degree
-        if delta == False:
+        if delta is False:
             return len(self.edges(u=node, begin=begin, end=end)) + \
                    len(self.edges(v=node, begin=begin, end=end))
 
         # delta == True, return list of changes
-        if begin == None:
+        if begin is None:
             begin = self.tree.begin
-        if end == None:
+        if end is None:
             end = self.tree.end
 
         current_degree = self.degree(node, begin=begin, end=begin)
@@ -823,10 +818,10 @@ class IntervalDiGraph(IntervalGraph):
             Must be bigger than or equal begin.
        """
         # need to check for iv.contains(begin) in case begin == end
-        if not begin and not end:
+        if begin is None and end is None:
             return True
-        if not begin:
+        if begin is None:
             return iv[2] < end
-        if not end:
+        if end is None:
             return iv[3] > begin
         return (iv[2] < end and iv[3] > begin) or iv[2] == begin

@@ -183,6 +183,14 @@ def test_impulsegraph_edges_default():
     assert list(G.edges()) == [(3, 4, 5)]
 
 
+def test_impulsegraph_edges_zero():
+    G = dnx.ImpulseGraph()
+    G.add_edge(0, 4, 5)
+    G.add_edge(3, 4, 5)
+
+    assert list(G.edges(u=0)) == [(0, 4, 5)]
+
+
 def test_impulsegraph_edges_slice():
     G = dnx.ImpulseGraph()
     G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
