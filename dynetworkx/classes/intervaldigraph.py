@@ -322,7 +322,7 @@ class IntervalDiGraph(IntervalGraph):
             if u is not None and v is not None:
                 if u not in self._pred:
                     return []
-                if v not in self._succ:
+                if v not in self._pred[u]:
                     return []
                 iedges = self._pred[u][v]
             elif u is not None:
