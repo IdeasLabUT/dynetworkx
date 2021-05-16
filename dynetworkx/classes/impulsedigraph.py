@@ -964,7 +964,7 @@ class ImpulseDiGraph(ImpulseGraph):
                                                                    set(g.neighbors(w)) - v_subgraph)))
                 yield from self.__extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
 
-    def calculate_temporal_motifs(self, sequence, delta, get_count_dict=False, ignore_simultaneous_edges=False):
+    def calculate_temporal_motifs(self, sequence, delta, get_count_dict=False):
         total_counts = dict()
         # this is used later for checking matching sequences
         node_sequence = tuple(node for edge in sequence for node in edge)
@@ -1001,8 +1001,7 @@ class ImpulseDiGraph(ImpulseGraph):
                         start += 1
                         if start >= len(edges):
                             break
-                    self.__decrement_counts(same_time_edges, len(sequence), counts,
-                                            ignore_simultaneous_edges=ignore_simultaneous_edges)
+                    self.__decrement_counts(same_time_edges, len(sequence), counts)
 
                 # combine all edges having the same timestamps to increment counts
                 tmp_time = edges[end][2]
@@ -1013,8 +1012,7 @@ class ImpulseDiGraph(ImpulseGraph):
                     if end >= len(edges):
                         break
 
-                self.__increment_counts(same_time_edges, len(sequence), counts,
-                                        ignore_simultaneous_edges=ignore_simultaneous_edges)
+                self.__increment_counts(same_time_edges, len(sequence), counts)
 
             # Extract out count for sequences that are isomorphic to the temporal motifs
             for keys in sorted(counts.keys()):
@@ -1047,42 +1045,30 @@ class ImpulseDiGraph(ImpulseGraph):
             return sum(total_counts.values())
 
     @staticmethod
-    def __decrement_counts(edges, motif_length, counts, ignore_simultaneous_edges=False):
+    def __decrement_counts(edges, motif_length, counts):
 
         suffixes = sorted(counts.keys(), key=len)
-        # count all permutations of edges that occur at the same timestamp
-        for i in range(len(edges)):
-            for e in edges:
-                counts[e] -= 1
+        for e in edges:
+            counts[e] -= 1
 
-            for suffix in suffixes:
-                if len(suffix)/2 < motif_length - 1:
-                    for e in edges:
-                        if counts.get(e + suffix):
-                            counts[e + suffix] -= counts[suffix]
-
-            # if ignoring simultaneous edges because they don't form the motif's ordering, calculate the edges only once
-            if ignore_simultaneous_edges:
-                break
+        for suffix in suffixes:
+            if len(suffix)/2 < motif_length - 1:
+                for e in edges:
+                    if counts.get(e + suffix):
+                        counts[e + suffix] -= counts[suffix]
 
     @staticmethod
-    def __increment_counts(edges, motif_length, counts, ignore_simultaneous_edges=False):
+    def __increment_counts(edges, motif_length, counts):
 
         prefixes = sorted(counts.keys(), key=len, reverse=True)
-        # count all permutations of edges that occur at the same timestamp
-        for i in range(len(edges)):
-            for prefix in prefixes:
-                if len(prefix)/2 < motif_length:
-                    for e in edges:
-                        if counts.get(prefix + e) is None:
-                            counts[prefix + e] = 0
-                        counts[prefix + e] += counts[prefix]
+        for prefix in prefixes:
+            if len(prefix)/2 < motif_length:
+                for e in edges:
+                    if counts.get(prefix + e) is None:
+                        counts[prefix + e] = 0
+                    counts[prefix + e] += counts[prefix]
 
-            for e in edges:
-                if counts.get(e) is None:
-                    counts[e] = 0
-                counts[e] += 1
-
-            # if ignoring simultaneous edges because they don't form the motif's ordering, calculate the edges only once
-            if ignore_simultaneous_edges:
-                break
+        for e in edges:
+            if counts.get(e) is None:
+                counts[e] = 0
+            counts[e] += 1
