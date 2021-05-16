@@ -361,19 +361,15 @@ class ImpulseDiGraph(ImpulseGraph):
         if end is None:
             inclusive = (inclusive[0], True)
 
-        if not u and not v:
-            if not begin or not end:
-                iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
-            # interval filtering
-            else:
-                if begin and end and begin > end:
-                    raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
-                                        "begin: {}, end: {}.".format(begin, end))
-                iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
+        if u is None and v is None:
+            if begin is not None and end is not None and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
+            iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
 
         else:
             # Node filtering
-            if u and v:
+            if u is not None and v is not None:
                 if u not in self._pred:
                     return []
                 if v not in self._pred[u]:
@@ -390,7 +386,7 @@ class ImpulseDiGraph(ImpulseGraph):
                 iedges = [iv for u in self._succ[v] for iv in self._succ[v][u]]
 
             # Interval filtering
-            if begin and end and begin > end:
+            if begin is not None and end is not None and begin > end:
                 raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
                                     "begin: {}, end: {}.".format(begin, end))
             iedges = [iv for iv in iedges if self.__in_interval(iv[2], begin, end, inclusive=inclusive)]

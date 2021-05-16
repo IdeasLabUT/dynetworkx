@@ -49,6 +49,14 @@ def test_impulsedigraph_edges_default():
     assert list(G.edges()) == [(3, 4, 5)]
 
 
+def test_impulsedigraph_edges_zero():
+    G = dnx.ImpulseDiGraph()
+    G.add_edge(0, 4, 5)
+    G.add_edge(3, 4, 5)
+
+    assert list(G.edges(u=0)) == [(0, 4, 5)]
+
+
 def test_impulsedigraph_edges_slice():
     G = dnx.ImpulseDiGraph()
     G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
@@ -94,6 +102,7 @@ def test_impulsedigraph_remove_edge_slice():
     assert G.has_edge(1, 2, begin=2, end=11) == False
     assert G.has_edge(1, 2)
 
+
 def test_impulsedigraph_degree():
     G = dnx.ImpulseDiGraph()
     G.add_edge(1, 2, 3)
@@ -104,6 +113,7 @@ def test_impulsedigraph_degree():
     assert G.degree() == 4/3
     assert G.degree(2, delta=True) == [(3, 1), (8, 1)]
 
+
 def test_impulsedigraph_in_degree():
     G = dnx.ImpulseDiGraph()
     G.add_edge(1, 2, 3)
@@ -113,6 +123,7 @@ def test_impulsedigraph_in_degree():
     assert G.in_degree(2, end=8) == 1
     assert G.in_degree() == 2/3
     assert G.in_degree(2, delta=True) == [(3, 1)]
+
 
 def test_impulsedigraph_out_degree():
     G = dnx.ImpulseDiGraph()
