@@ -942,13 +942,42 @@ class ImpulseDiGraph(ImpulseGraph):
 
         return G
 
-    def enumerate_subgraphs(self, g, size_k):
-        # vertices = sorted(g.nodes())
+    def __enumerate_subgraphs(self, g, size_k):
+        """Enumerate all size_k connected subgraph of static graph g.
+
+        Parameters
+        ----------
+        g: static graph to take sub-graphs from
+
+        size_k: size of sub-graphs
+
+        Returns
+        -------
+        an iterator for all size_k sub-graphs of g
+        """
         for v in g.nodes():
             v_extension = set(filter(lambda x: x > v, g.neighbors(v)))
             yield from self.__extend_subgraph({v}, v_extension, v, g, size_k)
 
     def __extend_subgraph(self, v_subgraph, v_extension, v, g, size_k):
+        """A recursive helper function for __enumerate_subgraphs() to enumerate all size_k connected sub-graphs
+
+        Parameters
+        ----------
+        v_subgraph: current set of nodes belong to a sub-graph
+
+        v_extension: current set of possible nodes to extend v_subgraph
+
+        v: starting node of the subgraph
+
+        g: static graph to take sub-graphs from
+
+        size_k: size of sub-graphs
+
+        Returns
+        -------
+        an iterator for all size_k sub-graphs of g with v as the starting node
+        """
         if len(v_subgraph) == size_k:
             yield g.subgraph(v_subgraph)
         else:
@@ -961,6 +990,35 @@ class ImpulseDiGraph(ImpulseGraph):
                 yield from self.__extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
 
     def calculate_temporal_motifs(self, sequence, delta, get_count_dict=False):
+        """Count all temporal motifs.
+
+        Parameters
+        ----------
+        sequence: a sequence of edges specifying the order of the motif. For example ((1,2), (2,3), (2,1)) means
+            1 -> 2 then 2 -> 3 then 2 -> 1. Note: The motif has to be connected.
+
+        delta: time window that specifies the maximum time limit that all edges in a motif must occur within.
+
+        get_count_dict: if True, return the motif count dictionary, which provides greater detail about which
+            motifs appear in a certain type of motif. If False, only returns the total count of all motifs of that type.
+
+        Returns
+        -------
+        count dictionary or total motif count
+
+        Examples
+        --------
+        >>> G = dnx.ImpulseDiGraph()
+        >>> G.add_edge(1, 2, 30)
+        >>> G.add_edge(3, 2, 30)
+        >>> G.add_edge(4, 2, 30)
+        >>> G.add_edge(2, 5, 32)
+        >>> G.add_edge(2, 5, 33)
+        >>> G.calculate_temporal_motifs(((1, 2), (2, 3), (2, 3)), 3)
+        3
+        >>> G.calculate_temporal_motifs(((1, 2), (2, 3), (2, 3)), 3, get_count_dict=True)
+        {(1, 2, 2, 5, 2, 5): 1, (4, 2, 2, 5, 2, 5): 1, (3, 2, 2, 5, 2, 5): 1}
+        """
         total_counts = dict()
         # this is used later for checking matching sequences
         node_sequence = tuple(node for edge in sequence for node in edge)
@@ -968,7 +1026,7 @@ class ImpulseDiGraph(ImpulseGraph):
         static_motif = Graph()
         static_motif.add_edges_from(sequence)
 
-        for sub in self.enumerate_subgraphs(g, size_k=len(static_motif.nodes())):
+        for sub in self.__enumerate_subgraphs(g, size_k=len(static_motif.nodes())):
             # A way to check if nodes in sub may contain motif will help speed up. Using nx.is_isomorphic() will
             # create error by dropping a lot of potential subgraphs.
             counts = dict()
@@ -1042,7 +1100,23 @@ class ImpulseDiGraph(ImpulseGraph):
 
     @staticmethod
     def __decrement_counts(edges, motif_length, counts):
+        """Decrement motif counts when removing edges.
+        Any potential orders of edges appearing at the same timestamp are ignored
+        (for example: when timestamp resolution is too high and edges that may happen one after another are combined
+        into 1 timestamp)
 
+        Parameters
+        ----------
+        edges: list of edges having the same timestamp
+
+        motif_length: length of motif
+
+        counts: a dictionary containing counts of all motifs
+
+        Returns
+        -------
+        None
+        """
         suffixes = sorted(counts.keys(), key=len)
         for e in edges:
             counts[e] -= 1
@@ -1055,7 +1129,23 @@ class ImpulseDiGraph(ImpulseGraph):
 
     @staticmethod
     def __increment_counts(edges, motif_length, counts):
+        """Increment motif counts when adding edges.
+        Any potential orders of edges appearing at the same timestamp are ignored
+        (for example: when timestamp resolution is too high and edges that may happen one after another are combined
+        into 1 timestamp)
 
+        Parameters
+        ----------
+        edges: list of edges having the same timestamp
+
+        motif_length: length of motif
+
+        counts: a dictionary containing counts of all motifs
+
+        Returns
+        -------
+        None
+        """
         prefixes = sorted(counts.keys(), key=len, reverse=True)
         for prefix in prefixes:
             if len(prefix)/2 < motif_length:

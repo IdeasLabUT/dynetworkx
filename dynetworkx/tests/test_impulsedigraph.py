@@ -134,3 +134,33 @@ def test_impulsedigraph_out_degree():
     assert G.out_degree(2, end=8) == 1
     assert G.out_degree() == 2/3
     assert G.out_degree(2, delta=True) == [(8, 1)]
+
+
+def test_calculate_temporal_motifs():
+    G = dnx.ImpulseDiGraph()
+    G.add_edge(1, 2, 3)
+    G.add_edge(2, 1, 8)
+    G.add_edge(2, 3, 8)
+    G.add_edge(3, 4, 8)
+    G.add_edge(2, 1, 14)
+    G.add_edge(4, 5, 15)
+    G.add_edge(2, 1, 18)
+    G.add_edge(2, 3, 18)
+    G.add_edge(2, 3, 20)
+    G.add_edge(2, 1, 22)
+    G.add_edge(2, 3, 25)
+
+    assert G.calculate_temporal_motifs(((1, 2), (1, 3), (1, 2)), 5) == 2
+    assert G.calculate_temporal_motifs(((1, 2), (1, 3), (1, 2)), 5, get_count_dict=True) == \
+           {(2, 1, 2, 3, 2, 1): 1, (2, 3, 2, 1, 2, 3): 1}
+
+    # test simultaneous timestamps
+    G.add_edge(1, 2, 30)
+    G.add_edge(3, 2, 30)
+    G.add_edge(4, 2, 30)
+    G.add_edge(2, 5, 32)
+    G.add_edge(2, 5, 33)
+    assert G.calculate_temporal_motifs(((1, 2), (2, 3), (2, 3)), 3) == 3
+    assert G.calculate_temporal_motifs(((1, 2), (2, 3), (2, 3)), 3, get_count_dict=True) == \
+           {(1, 2, 2, 5, 2, 5): 1, (4, 2, 2, 5, 2, 5): 1, (3, 2, 2, 5, 2, 5): 1}
+    assert G.calculate_temporal_motifs(((1, 2), (3, 2), (4, 2)), 3) == 0
