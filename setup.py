@@ -6,7 +6,7 @@ setup(
     author='Makan Arastuie',
     author_email='Makan.Arastuie@rockets.utoledo.edu',
     packages=['dynetworkx',
-              'dynetworkx.algorithms,
+              'dynetworkx.algorithms',
               'dynetworkx.classes',
               'dynetworkx.tests',
               ],
