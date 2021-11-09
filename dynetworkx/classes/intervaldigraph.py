@@ -32,6 +32,47 @@ class IntervalDiGraph(IntervalGraph):
 
         self.graph.update(attr)
 
+    def add_node(self, node_for_adding, **attr):
+        """Add a single node `node_for_adding` and update node attributes.
+
+        Parameters
+        ----------
+        node_for_adding : node
+            A node can be any hashable Python object except None.
+        attr : keyword arguments, optional
+            Set or change node attributes using key=value.
+
+        See Also
+        --------
+        add_nodes_from
+
+        Examples
+        --------
+        >>> G = dnx.IntervalGraph()
+        >>> G.add_node(1)
+        >>> G.add_node('Hello')
+        >>> G.number_of_nodes()
+        2
+
+        Use keywords set/change node attributes:
+
+        >>> G.add_node(1, size=10)
+        >>> G.add_node(3, weight=0.4, UTM=('13S', 382871, 3972649))
+
+        Notes
+        -----
+        A hashable object is one that can be used as a key in a Python
+        dictionary. This includes strings, numbers, tuples of strings
+        and numbers, etc.
+
+        On many platforms hashable items also include mutables such as
+        NetworkX Graphs, though one should be careful that the hash
+        doesn't change on mutables.
+        """
+        self._node.setdefault(node_for_adding, attr).update(attr)
+        self._pred.setdefault(node_for_adding, {})
+        self._succ.setdefault(node_for_adding, {})
+
     def add_edge(self, u, v, begin, end, **attr):
         """Add an edge between u and v, during interval [begin, end).
 

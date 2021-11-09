@@ -373,7 +373,7 @@ def test_intervalgraph_to_snapshots_default():
     assert sorted(list(S[0][1].edges())) == [(2, 4), (4, 6)]
 
 
-def test_interval_graph_to_snapshots_len():
+def test_intervalgraph_to_snapshots_len():
     G = dnx.IntervalGraph()
     G.add_edges_from([(1, 2, 3, 6), (2, 4, 5, 11), (6, 4, 19, 20), (2, 4, 15, 16)])
     S = G.to_snapshots(length_of_snapshots=2, return_length=True)
