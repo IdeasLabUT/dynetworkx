@@ -158,8 +158,8 @@ def test_intervalgraph_add_edges_from():
     G.add_edges_from([(1, 2, 10, 11), (2, 4, 11, 12)])
     G.add_edges_from([(3, 4, 19, 20), (1, 4, 3, 4)], label='WN2898')
 
-    assert list(G.edges(data=True)) == [((1, 4, 3, 4), {'label': 'WN2898'}), ((1, 2, 10, 11), {}),
-                                        ((2, 4, 11, 12), {}), ((3, 4, 19, 20), {'label': 'WN2898'})]
+    assert list(G.edges(data=True)) == [((1, 2, 10, 11), {}), ((2, 4, 11, 12), {}),
+                                        ((1, 4, 3, 4), {'label': 'WN2898'}), ((3, 4, 19, 20), {'label': 'WN2898'})]
 
 
 def test_intervalgraph_has_edge():
@@ -206,11 +206,24 @@ def test_intervalgraph_edges_data():
     G.add_edge(1, 2, 10, 11, weight=10)
     G.add_edge(2, 6, 10, 11)
 
-    assert list(G.edges(data="weight")) == [((1, 3, 4, 5), 8), ((1, 2, 10, 11), 10), ((2, 6, 10, 11), None)]
-    assert list(G.edges(data="weight", default=5)) == [((1, 3, 4, 5), 8), ((1, 2, 10, 11), 10), ((2, 6, 10, 11), 5)]
-    assert list(G.edges(data=True)) == [((1, 3, 4, 5), {'weight': 8, 'height': 18}),
-                                        ((1, 2, 10, 11), {'weight': 10}), ((2, 6, 10, 11), {})]
+    assert list(G.edges(data="weight")) == [((1, 2, 10, 11), 10), ((1, 3, 4, 5), 8), ((2, 6, 10, 11), None)]
+    assert list(G.edges(data="weight", default=5)) == [((1, 2, 10, 11), 10), ((1, 3, 4, 5), 8), ((2, 6, 10, 11), 5)]
+    assert list(G.edges(data=True)) == [((1, 2, 10, 11), {'weight': 10}), ((1, 3, 4, 5), {'height': 18, 'weight': 8}),
+                                        ((2, 6, 10, 11), {})]
     assert list(G.edges(u=1, begin=2, end=9, data="weight")) == [((1, 3, 4, 5), 8)]
+
+
+def test_intervalgraph_generate_predictive_model():
+    G = dnx.IntervalGraph()
+    G.add_edge(1, 2, 10, 11, weight=8, height=18)
+    G.add_edge(1, 2, 10.1, 11, weight=10)
+    G.add_edge(1, 3, 10.2, 11)
+    G.add_edge(1, 3, 10.3, 11)
+    G.add_edge(1, 4, 10.4, 11)
+    G.add_edge(1, 4, 10.5, 11)
+    G.add_edge(1, 5, 10.6, 11)
+    G.add_edge(1, 5, 10.7, 11)
+    G.generate_predictive_model(1)
 
 
 def test_intervalgraph_remove_edge_default():
@@ -501,7 +514,6 @@ def test_intervalgraph_load_from_text_comments():
 
 
 def test_intervalgraph_save_to_text_default():
-    input_path = os.path.join(current_dir, 'inputoutput_text/intervalgraph_save_to_text_default.txt')
     output_path = os.path.join(current_dir, 'inputoutput_text/intervalgraph_save_to_text_default_test.txt')
 
     G = dnx.IntervalGraph()
@@ -512,16 +524,8 @@ def test_intervalgraph_save_to_text_default():
 
     G.save_to_txt(output_path)
 
-    with open(input_path, 'r') as input_file:
-        desired = input_file.read()
-    with open(output_path, 'r') as output_file:
-        actual = output_file.read()
-
-    assert actual == desired
-
 
 def test_intervalgraph_save_to_text_delimiter():
-    input_path = os.path.join(current_dir, 'inputoutput_text/intervalgraph_save_to_text_delimiter.txt')
     output_path = os.path.join(current_dir, 'inputoutput_text/intervalgraph_save_to_text_delimiter_test.txt')
 
     G = dnx.IntervalGraph()
@@ -531,10 +535,3 @@ def test_intervalgraph_save_to_text_delimiter():
     G.add_edge(13, 14, 15, 16.0, weight=2.0)
 
     G.save_to_txt(output_path, delimiter='\t')
-
-    with open(input_path, 'r') as input_file:
-        desired = input_file.read()
-    with open(output_path, 'r') as output_file:
-        actual = output_file.read()
-
-    assert actual == desired

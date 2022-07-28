@@ -64,10 +64,24 @@ def test_intervaldigraph_edges_data():
     G.add_edge(1, 2, 10, 11, weight=10)
     G.add_edge(2, 6, 10, 11)
 
-    assert list(G.edges(data="weight")) == [((1, 3, 4, 5), 8), ((1, 2, 10, 11), 10), ((2, 6, 10, 11), None)]
-    assert list(G.edges(data="weight", default=5)) == [((1, 3, 4, 5), 8), ((1, 2, 10, 11), 10), ((2, 6, 10, 11), 5)]
-    assert list(G.edges(data=True)) == [((1, 3, 4, 5), {'height': 18, 'weight': 8}), ((1, 2, 10, 11), {'weight': 10}), ((2, 6, 10, 11), {})]
+    assert list(G.edges(data="weight")) == [((1, 2, 10, 11), 10), ((1, 3, 4, 5), 8), ((2, 6, 10, 11), None)]
+    assert list(G.edges(data="weight", default=5)) == [((1, 2, 10, 11), 10), ((1, 3, 4, 5), 8), ((2, 6, 10, 11), 5)]
+    assert list(G.edges(data=True)) == [((1, 2, 10, 11), {'weight': 10}), ((1, 3, 4, 5), {'height': 18, 'weight': 8}),
+                                        ((2, 6, 10, 11), {})]
     assert list(G.edges(u=1, begin=2, end=9, data="weight")) == [((1, 3, 4, 5), 8)]
+
+
+def test_intervaldigraph_generate_predictive_model():
+    G = dnx.IntervalDiGraph()
+    G.add_edge(1, 2, 10, 11, weight=8, height=18)
+    G.add_edge(1, 2, 10.1, 11, weight=10)
+    G.add_edge(1, 3, 10.2, 11)
+    G.add_edge(1, 3, 10.3, 11)
+    G.add_edge(1, 4, 10.4, 11)
+    G.add_edge(1, 4, 10.5, 11)
+    G.add_edge(1, 5, 10.6, 11)
+    G.add_edge(1, 5, 10.7, 11)
+    G.generate_predictive_model(1)
 
 
 def test_intervaldigraph_remove_edge_default():
@@ -85,7 +99,7 @@ def test_intervaldigraph_remove_edge_slice():
 
     assert G.has_edge(1, 2, begin=2, end=11)
     G.remove_edge(1, 2, begin=2, end=11)
-    assert G.has_edge(1, 2, begin=2, end=11) == False
+    assert G.has_edge(1, 2, begin=2, end=11) is False
     assert G.has_edge(1, 2)
 
 

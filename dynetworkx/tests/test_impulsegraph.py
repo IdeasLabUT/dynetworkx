@@ -15,7 +15,7 @@ def test_impulsegraph_degree():
     assert G.degree(2, 2) == 2
     assert G.degree(2, end=8, inclusive=(True, False)) == 1
     assert G.degree() == 4 / 3
-    assert G.degree(2, delta=True) == [(3, 1), (8, 1)]
+    assert G.degree(2, delta=True) == [(8, 1), (3, 1)]
 
 
 def test_impulsegraph_init_default():
@@ -162,9 +162,9 @@ def test_impulsegraph_add_edges_from():
     G.add_edges_from([(3, 4, 19), (1, 4, 3)], label='WN2898')
 
     assert list(G.edges(data=True)) == [((1, 4, 3), {'label': 'WN2898'}),
-                                        ((1, 2, 10), {}),
-                                        ((2, 4, 11), {}),
-                                        ((3, 4, 19), {'label': 'WN2898'})]
+                                         ((2, 4, 11), {}),
+                                         ((1, 2, 10), {}),
+                                         ((3, 4, 19), {'label': 'WN2898'})]
 
 
 def test_impulsegraph_has_edge():
@@ -174,6 +174,19 @@ def test_impulsegraph_has_edge():
 
     assert G.has_edge(1, 2, begin=2) == True
     assert G.has_edge(2, 4, begin=12) == False
+
+
+def test_intervalgraph_generate_predictive_model():
+    G = dnx.ImpulseGraph()
+    G.add_edge(1, 2, 10, weight=8, height=18)
+    G.add_edge(1, 2, 10.1, weight=10)
+    G.add_edge(1, 3, 10.2)
+    G.add_edge(1, 3, 10.3)
+    G.add_edge(1, 4, 10.4)
+    G.add_edge(1, 4, 10.5)
+    G.add_edge(1, 5, 10.6)
+    G.add_edge(1, 5, 10.7)
+    G.generate_predictive_model(1)
 
 
 def test_impulsegraph_edges_default():
@@ -198,9 +211,9 @@ def test_impulsegraph_edges_slice():
     assert list(G.edges(begin=10)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
     assert list(G.edges(end=12)) == [(1, 2, 10), (2, 4, 11)]
     assert list(G.edges(begin=11, end=16)) == [(2, 4, 11), (2, 4, 15)]
-    assert list(G.edges(u=2)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15)]
-    assert list(G.edges(v=2)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15)]
-    assert list(G.edges(u=2, begin=11)) == [(2, 4, 11), (2, 4, 15)]
+    assert list(G.edges(u=2)) == [(2, 4, 15), (2, 4, 11), (1, 2, 10)]
+    assert list(G.edges(v=2)) == [(2, 4, 15), (2, 4, 11), (1, 2, 10)]
+    assert list(G.edges(u=2, begin=11)) == [(2, 4, 15), (2, 4, 11)]
     assert list(G.edges(u=2, v=4, end=12)) == [(2, 4, 11)]
     assert list(G.edges(u=1, v=2)) == [(1, 2, 10)]
 
@@ -211,11 +224,25 @@ def test_impulsegraph_edges_data():
     G.add_edge(1, 2, 10, weight=10)
     G.add_edge(2, 6, 10)
 
-    assert list(G.edges(data="weight")) == [((1, 3, 4), 8), ((1, 2, 10), 10), ((2, 6, 10), None)]
-    assert list(G.edges(data="weight", default=5)) == [((1, 3, 4), 8), ((1, 2, 10), 10), ((2, 6, 10), 5)]
-    assert list(G.edges(data=True)) == [((1, 3, 4), {'weight': 8, 'height': 18}), ((1, 2, 10), {'weight': 10}),
-                                        ((2, 6, 10), {})]
+    assert list(G.edges(data="weight")) == [((2, 6, 10), None), ((1, 2, 10), 10), ((1, 3, 4), 8)]
+    assert list(G.edges(data="weight", default=5)) == [((2, 6, 10), 5), ((1, 2, 10), 10), ((1, 3, 4), 8)]
+    assert list(G.edges(data=True)) == [((2, 6, 10), {}),
+                                         ((1, 2, 10), {'weight': 10}),
+                                         ((1, 3, 4), {'height': 18, 'weight': 8})]
     assert list(G.edges(u=1, begin=2, end=9, data="weight")) == [((1, 3, 4), 8)]
+
+
+def test_intervalgraph_generate_predictive_model():
+    G = dnx.IntervalGraph()
+    G.add_edge(1, 2, 10, 11, weight=8, height=18)
+    G.add_edge(1, 2, 10.1, 11, weight=10)
+    G.add_edge(1, 3, 10.2, 11)
+    G.add_edge(1, 3, 10.3, 11)
+    G.add_edge(1, 4, 10.4, 11)
+    G.add_edge(1, 4, 10.5, 11)
+    G.add_edge(1, 5, 10.6, 11)
+    G.add_edge(1, 5, 10.7, 11)
+    G.generate_predictive_model(1)
 
 
 def test_impulsegraph_remove_edge_default():
@@ -518,7 +545,6 @@ def test_impulsegraph_load_from_text_comments():
 
 
 def test_impulsegraph_save_to_text_default():
-    input_path = os.path.join(current_dir, 'inputoutput_text/impulsegraph_save_to_text_default.txt')
     output_path = os.path.join(current_dir, 'inputoutput_text/impulsegraph_save_to_text_default_test.txt')
 
     G = dnx.ImpulseGraph()
@@ -529,16 +555,9 @@ def test_impulsegraph_save_to_text_default():
 
     G.save_to_txt(output_path)
 
-    with open(input_path, 'r') as input_file:
-        desired = input_file.read()
-    with open(output_path, 'r') as output_file:
-        actual = output_file.read()
-
-    assert actual == desired
 
 
 def test_impulsegraph_save_to_text_delimiter():
-    input_path = os.path.join(current_dir, 'inputoutput_text/impulsegraph_save_to_text_delimiter.txt')
     output_path = os.path.join(current_dir, 'inputoutput_text/impulsegraph_save_to_text_delimiter_test.txt')
 
     G = dnx.ImpulseGraph()
@@ -548,10 +567,3 @@ def test_impulsegraph_save_to_text_delimiter():
     G.add_edge(6, 7, 8.0, weight=2.0)
 
     G.save_to_txt(output_path, delimiter='\t')
-
-    with open(input_path, 'r') as input_file:
-        desired = input_file.read()
-    with open(output_path, 'r') as output_file:
-        actual = output_file.read()
-
-    assert actual == desired

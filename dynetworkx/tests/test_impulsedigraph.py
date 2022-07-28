@@ -27,8 +27,8 @@ def test_impulsedigraph_add_edges_from():
     G.add_edges_from([(3, 4, 19), (1, 4, 3)], label='WN2898')
 
     assert list(G.edges(data=True)) == [((1, 4, 3), {'label': 'WN2898'}),
-                                        ((1, 2, 10), {}),
                                         ((2, 4, 11), {}),
+                                        ((1, 2, 10), {}),
                                         ((3, 4, 19), {'label': 'WN2898'})]
 
 
@@ -62,12 +62,12 @@ def test_impulsedigraph_edges_slice():
     G.add_edges_from([(1, 2, 10), (2, 4, 11), (6, 4, 19), (2, 4, 15)])
 
     assert list(G.edges(begin=10)) == [(1, 2, 10), (2, 4, 11), (2, 4, 15), (6, 4, 19)]
-    assert list(G.edges(end=11)) == [(1, 2, 10), (2, 4, 11)]
-    assert list(G.edges(begin=11, end=15)) == [(2, 4, 11), (2, 4, 15)]
-    assert list(G.edges(u=2)) == [(2, 4, 11), (2, 4, 15)]
+    assert list(G.edges(end=11)) == [(1, 2, 10)]
+    assert list(G.edges(begin=11, end=15)) == [(2, 4, 11)]
+    assert list(G.edges(u=2)) == [(2, 4, 15), (2, 4, 11)]
     assert list(G.edges(v=2)) == [(1, 2, 10)]
-    assert list(G.edges(u=2, begin=11)) == [(2, 4, 11), (2, 4, 15)]
-    assert list(G.edges(u=2, v=4, end=11)) == [(2, 4, 11)]
+    assert list(G.edges(u=2, begin=11)) == [(2, 4, 15), (2, 4, 11)]
+    assert list(G.edges(u=2, v=4, end=11)) == []
     assert list(G.edges(u=1, v=2)) == [(1, 2, 10)]
 
 
@@ -77,10 +77,11 @@ def test_impulsedigraph_edges_data():
     G.add_edge(1, 2, 10, weight=10)
     G.add_edge(2, 6, 10)
 
-    assert list(G.edges(data="weight")) == [((1, 3, 4), 8), ((1, 2, 10), 10), ((2, 6, 10), None)]
-    assert list(G.edges(data="weight", default=5)) == [((1, 3, 4), 8), ((1, 2, 10), 10), ((2, 6, 10), 5)]
-    assert list(G.edges(data=True)) == [((1, 3, 4), {'weight': 8, 'height': 18}), ((1, 2, 10), {'weight': 10}),
-                                        ((2, 6, 10), {})]
+    assert list(G.edges(data="weight")) == [((2, 6, 10), None), ((1, 2, 10), 10), ((1, 3, 4), 8)]
+    assert list(G.edges(data="weight", default=5)) == [((2, 6, 10), 5), ((1, 2, 10), 10), ((1, 3, 4), 8)]
+    assert list(G.edges(data=True)) == [((2, 6, 10), {}),
+                                         ((1, 2, 10), {'weight': 10}),
+                                         ((1, 3, 4), {'height': 18, 'weight': 8})]
     assert list(G.edges(u=1, begin=2, end=9, data="weight")) == [((1, 3, 4), 8)]
 
 
@@ -109,7 +110,7 @@ def test_impulsedigraph_degree():
     G.add_edge(2, 3, 8)
     assert G.degree(2) == 2
     assert G.degree(2, 4) == 1
-    assert G.degree(2, end=8) == 2
+    assert G.degree(2, end=8) == 1
     assert G.degree() == 4/3
     assert G.degree(2, delta=True) == [(3, 1), (8, 1)]
 
@@ -131,7 +132,7 @@ def test_impulsedigraph_out_degree():
     G.add_edge(2, 3, 8)
     assert G.out_degree(2) == 1
     assert G.out_degree(2, 4) == 1
-    assert G.out_degree(2, end=8) == 1
+    assert G.out_degree(2, end=8) == 0
     assert G.out_degree() == 2/3
     assert G.out_degree(2, delta=True) == [(8, 1)]
 

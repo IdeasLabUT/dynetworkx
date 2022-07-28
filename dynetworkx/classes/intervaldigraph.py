@@ -1,11 +1,16 @@
-from networkx import NetworkXError
-from sortedcontainers import SortedDict
-
 from dynetworkx.classes.intervalgraph import IntervalGraph
-from dynetworkx.classes.intervaltree import IntervalTree
 from networkx.classes.digraph import DiGraph
 from networkx.classes.multidigraph import MultiDiGraph
 
+import dynetworkx as dnx
+from networkx.exception import NetworkXError
+from dynetworkx.classes.intervaltree import IntervalTree
+from sortedcontainers import SortedList, SortedDict
+import random
+import math
+from timeit import default_timer as timer
+from sklearn.linear_model import LinearRegression
+from itertools import product
 
 class IntervalDiGraph(IntervalGraph):
 
@@ -29,6 +34,7 @@ class IntervalDiGraph(IntervalGraph):
         self._node = {}
         self._pred = {}  # out
         self._succ = {}  # in
+        self._model = None
 
         self.graph.update(attr)
 
@@ -48,7 +54,7 @@ class IntervalDiGraph(IntervalGraph):
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.IntervalDiGraph()
         >>> G.add_node(1)
         >>> G.add_node('Hello')
         >>> G.number_of_nodes()
@@ -125,8 +131,6 @@ class IntervalDiGraph(IntervalGraph):
         >>> G.add_edge(1, 2, 3, 10 weight=3)
         >>> G.add_edge(1, 3, 4, 9, weight=7, capacity=15, length=342.7)
         """
-
-        iedge = self.edges(u, v, begin, end, data=True)
 
         # if edge exists, just update attr
         if u in self._pred and v in self._succ and v in self._pred[u] and u in self._succ[v] and (u, v, begin, end) in self._pred[u][v] and (u, v, begin, end) in self._succ[v][u]:
@@ -257,13 +261,51 @@ class IntervalDiGraph(IntervalGraph):
             return self.edges(u, v, begin, end) is not None
 
         if begin and end and begin > end:
-            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+            raise NetworkXError("IntervalDiGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
         for iv in self._pred[u][v]:
             if self.__overlaps_or_contains(iv, begin, end):
                 return True
         return False
+
+    def __edges_node_first(self, u_list, v_list, begin, end):
+        # Node filtering
+        iedges = set()
+        for u, v in product(u_list, v_list):
+            if u is None and v is None:
+                iedges.update([iv for u in self._pred for v in self._pred[u] for iv in self._pred[u][v]])
+            elif u is not None and v is not None:
+                if u not in self._pred:
+                    continue
+                if v not in self._pred[u]:
+                    continue
+                iedges.update(self._pred[u][v])
+            elif u is not None:
+                if u not in self._pred:
+                    continue
+                iedges.update([iv for v in self._pred[u] for iv in self._pred[u][v]])
+            else:
+                if v not in self._succ:
+                    continue
+                iedges.update([iv for u in self._succ[v] for iv in self._succ[v][u]])
+
+            # If interval is none, return
+            if begin is None and end is None:
+                return iedges
+
+            # Interval filtering
+            if begin is not None and end is not None and begin > end:
+                raise NetworkXError("IntervalDiGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
+
+        return [iv for iv in iedges if IntervalDiGraph.__overlaps_or_contains(iv, begin, end)]
+
+    def __edges_interval_first(self, begin, end):
+        if begin is not None and end is not None and begin > end:
+            raise NetworkXError("IntervalDiGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
+        return self.tree[begin:end]
 
     def edges(self, u=None, v=None, begin=None, end=None, data=False, default=None):
         """Returns a list of Interval objects of the IntervalDiGraph edges.
@@ -352,34 +394,53 @@ class IntervalDiGraph(IntervalGraph):
         # If non of the nodes are defined the interval tree is queried for the list of edges,
         # otherwise the edges are returned based on the nodes in the self._adj.o
 
-        if u is None and v is None:
-            if begin is not None and end is not None and begin > end:
-                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
-                                    "begin: {}, end: {}.".format(begin, end))
-            iedges = self.tree[begin:end]
+        try:
+            _ = (e for e in u)
+        except TypeError:
+            u = [u]
 
-        else:
-            # Node filtering
-            if u is not None and v is not None:
-                if u not in self._pred:
-                    return []
-                if v not in self._pred[u]:
-                    return []
-                iedges = self._pred[u][v]
-            elif u is not None:
-                if u not in self._pred:
-                    return []
-                iedges = [iv for v in self._pred[u] for iv in self._pred[u][v]]
+        try:
+            _ = (e for e in v)
+        except TypeError:
+            v = [v]
+
+        # Return All
+        if u == [None] and v == [None] and begin is None and end is None:
+            iedges = self.__edges_node_first(u, v, begin, end)
+
+        # Interval First
+        elif u == [None] and v == [None]:
+            iedges = self.__edges_interval_first(begin, end)
+
+        # Compound
+        elif (u != [None] or v != [None]) and (begin is not None or end is not None) and self._model is not None:
+            if u == [None]:
+                nodes = v
+            elif v == [None]:
+                nodes = u
             else:
-                if v not in self._succ:
-                    return []
-                iedges = [iv for u in self._succ[v] for iv in self._succ[v][u]]
+                nodes = set(*u).union(set(*v))
 
-            # Interval filtering
-            if begin is not None and end is not None and begin > end:
-                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
-                                    "begin: {}, end: {}.".format(begin, end))
-            iedges = [iv for iv in iedges if IntervalDiGraph.__overlaps_or_contains(iv, begin, end)]
+            node_percent = len(nodes) / self.number_of_nodes()
+
+            graph_begin, graph_end = self.interval()
+            if begin is None:
+                begin = graph_begin
+            if end is None:
+                end = graph_end
+
+            interval_percent = (end - begin) / (graph_end - graph_begin)
+
+            node_time, interval_time = self._model.predict((node_percent, interval_percent))[0]
+
+            if node_time < interval_time:
+                iedges = self.__edges_node_first(u, v, begin, end)
+            else:
+                iedges = [e for e in self.__edges_interval_first(begin, end) if e[0] in nodes or e[1] in nodes]
+
+        # Node First
+        else:
+            iedges = self.__edges_node_first(u, v, begin, end)
 
         # Appending attribute data if needed
         if data is False:
@@ -388,8 +449,70 @@ class IntervalDiGraph(IntervalGraph):
         if data is True:
             return [(iv, self._pred[iv[0]][iv[1]][iv]) for iv in iedges]
 
-        return [(iv, self._pred[iv[0]][iv[1]][iv][data]) if data in self._pred[iv[0]][iv[1]][iv] else
-                (iv, default) for iv in iedges]
+        return [(iv, self._pred[iv[0]][iv[1]][iv][data]) if data in self._pred[iv[0]][iv[1]][iv] else (iv, default) for iv
+                in iedges]
+
+    def __generate_training_data(self, training_size):
+        """Returns list of training samples, X = (node_percent, interval_percent), y = (node_time, interval_time).
+
+        Parameters
+        ----------
+        trainingSize : int
+            Number of samples to generate.
+        """
+
+        node_list = list(self._node.keys())
+        graph_begin, graph_end = self.interval()
+        X = []
+        y = []
+
+        while len(X) < training_size:
+            node_percent = random.randint(1, 50)
+            interval_percent = random.randint(1, 50)
+            begin = random.randint(graph_begin,
+                                   graph_end - math.ceil((graph_end - graph_begin) * interval_percent / 100))
+            nodes = set(random.choices(node_list, k=math.floor(node_percent / 100 * len(node_list))))
+            end = begin + (graph_end - graph_begin) * interval_percent / 100
+
+            node_edges = set()
+            start_timer = timer()
+            for u in nodes:
+                if u in self._pred:
+                    for v in self._pred[u]:
+                        for edge in self._pred[u][v]:
+                            if edge not in node_edges and (edge[2] == begin or (edge[2] > begin and edge[3] < end)):
+                                node_edges.add(edge)
+            node_time = timer() - start_timer
+
+            if len(node_edges) == 0:
+                continue
+
+            interval_edges = []
+            start_timer = timer()
+            for edge in self.tree[begin:end]:
+                if edge[0] in nodes or edge[1] in nodes:
+                    interval_edges.append(edge)
+            interval_time = timer() - start_timer
+
+            X.append((len(nodes) / len(node_list), interval_percent / 100))
+            y.append((node_time, interval_time))
+
+        return X, y
+
+    def generate_predictive_model(self, training_size=250):
+        """Trains linear regression model used to predict faster ordering of compound slices.
+
+        Parameters
+        ----------
+        trainingSize : int
+            Number of samples to generate.
+        """
+        X, y = self.__generate_training_data(training_size)
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        self._model = model
 
     def remove_edge(self, u, v, begin=None, end=None, overlapping=True):
         """Remove the edge between u and v in the interval graph,
@@ -468,7 +591,7 @@ class IntervalDiGraph(IntervalGraph):
         # remove edge between u and v with overlapping interval with the given interval
         else:
             if begin and end and begin > end:
-                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                raise NetworkXError("IntervalDiGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
 
             for iv in self._pred[u][v]:
@@ -775,7 +898,7 @@ class IntervalDiGraph(IntervalGraph):
 
         Examples
         --------
-        >>> G = dnx.IntervalGraph()
+        >>> G = dnx.IntervalDiGraph()
         >>> G.add_edges_from([(1, 2, 3, 10), (2, 4, 1, 11), (6, 4, 12, 19), (2, 4, 8, 15)])
         >>> H = G.to_subgraph(4, 12)
         >>> type(H)
@@ -796,7 +919,7 @@ class IntervalDiGraph(IntervalGraph):
         [(1, 2, {'end': 10, 'begin': 3}), (2, 4, {'end': 11, 'begin': 1}), (2, 4, {'end': 15, 'begin': 8})]
         """
         if begin and end and begin > end:
-            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+            raise NetworkXError("IntervalDiGraph: interval end must be bigger than or equal to begin: "
                                 "begin: {}, end: {}.".format(begin, end))
         iedges = self.tree[begin:end]
 
@@ -807,10 +930,10 @@ class IntervalDiGraph(IntervalGraph):
 
         if edge_data and edge_interval_data:
             G.add_edges_from((iedge.data[0], iedge.data[1],
-                              dict(self._adj[iedge.data[0]][iedge], begin=iedge.begin, end=iedge.end))
+                              dict(self._pred[iedge.data[0]][iedge], begin=iedge.begin, end=iedge.end))
                              for iedge in iedges)
         elif edge_data:
-            G.add_edges_from((iedge.data[0], iedge.data[1], self._adj[iedge.data[0]][iedge].copy())
+            G.add_edges_from((iedge.data[0], iedge.data[1], self._pred[iedge.data[0]][iedge].copy())
                              for iedge in iedges)
         elif edge_interval_data:
             G.add_edges_from((iedge.data[0], iedge.data[1], {'begin': iedge.begin, 'end': iedge.end})

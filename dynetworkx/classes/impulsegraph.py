@@ -1,14 +1,16 @@
 import dynetworkx as dnx
 from networkx.classes.graph import Graph
 from networkx.exception import NetworkXError
-from sortedcontainers import SortedDict
 from networkx.classes.multigraph import MultiGraph
 from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
-import numpy as np
-import itertools
-import networkx as nx
-import time
+from sortedcontainers import SortedList, SortedDict
 import random
+import math
+from timeit import default_timer as timer
+from sklearn.linear_model import LinearRegression
+from itertools import product
+
+from dynetworkx.classes.intervalgraph import IntervalGraph
 
 
 class ImpulseGraph(object):
@@ -131,6 +133,7 @@ class ImpulseGraph(object):
         self.graph = {}  # dictionary for graph attributes
         self._node = {}
         self._adj = {}
+        self._model = None
 
         self.graph.update(attr)
 
@@ -653,6 +656,105 @@ class ImpulseGraph(object):
                 return True
         return False
 
+    def __generate_training_data(self, training_size):
+        """Returns list of training samples, X = (node_percent, interval_percent), y = (node_time, interval_time).
+
+        Parameters
+        ----------
+        trainingSize : int
+            Number of samples to generate.
+        """
+
+        node_list = list(self._node.keys())
+        graph_begin, graph_end = self.interval()
+        X = []
+        y = []
+
+        while len(X) < training_size:
+            node_percent = random.randint(1, 50)
+            interval_percent = random.randint(1, 50)
+            begin = random.randint(graph_begin,
+                                   graph_end - math.ceil((graph_end - graph_begin) * interval_percent / 100))
+            nodes = set(random.choices(node_list, k=math.floor(node_percent / 100 * len(node_list))))
+            end = begin + (graph_end - graph_begin) * interval_percent / 100
+
+            node_edges = set()
+            start_timer = timer()
+            for u in nodes:
+                for v in self._adj[u]:
+                    for edge in self._adj[u][v]:
+                        if edge not in node_edges and (edge[2] == begin or (begin < edge[2] < end)):
+                            node_edges.add(edge)
+            node_time = timer() - start_timer
+
+            if len(node_edges) == 0:
+                continue
+
+            interval_edges = []
+            start_timer = timer()
+            for edge in [(u, v, t) for t in self.tree.irange(begin, end, inclusive=(True, False)) for u, v in self.tree[t]]:
+                if edge[0] in nodes or edge[1] in nodes:
+                    interval_edges.append(edge)
+            interval_time = timer() - start_timer
+
+            X.append((len(nodes) / len(node_list), interval_percent / 100))
+            y.append((node_time, interval_time))
+
+        return X, y
+
+    def generate_predictive_model(self, training_size=250):
+        """Trains linear regression model used to predict faster ordering of compound slices.
+
+        Parameters
+        ----------
+        trainingSize : int
+            Number of samples to generate.
+        """
+        X, y = self.__generate_training_data(training_size)
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        self._model = model
+
+    def __edges_node_first(self, u_list, v_list, begin, end):
+        # Node filtering
+        iedges = set()
+        for u, v in product(u_list, v_list):
+            if u is None and v is None:
+                iedges.update([iv for u in self._adj for v in self._adj[u] for iv in self._adj[u][v]])
+            elif u is not None and v is not None:
+                if u not in self._adj:
+                    continue
+                if v not in self._adj[u]:
+                    continue
+                iedges.update(self._adj[u][v])
+            elif u is not None:
+                if u not in self._adj:
+                    continue
+                iedges.update([iv for v in self._adj[u] for iv in self._adj[u][v]])
+            else:
+                if v not in self._adj:
+                    continue
+                iedges.update([iv for u in self._adj[v] for iv in self._adj[v][u]])
+
+            # If interval is none, return
+            if begin is None and end is None:
+                return iedges
+
+            # Interval filtering
+            if begin is not None and end is not None and begin > end:
+                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                    "begin: {}, end: {}.".format(begin, end))
+
+        return [iv for iv in iedges if ImpulseGraph.__overlaps_or_contains(iv, begin, end)]
+
+    def __edges_interval_first(self, begin, end):
+        if begin is not None and end is not None and begin > end:
+            raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
+                                "begin: {}, end: {}.".format(begin, end))
+        return [(u, v, t) for t in self.tree.irange(begin, end, inclusive=(True, False)) for u, v in self.tree[t]]
+
     def edges(self, u=None, v=None, begin=None, end=None, inclusive=(True, False), data=False, default=None):
         """Returns a list of Interval objects of the ImpulseGraph edges.
 
@@ -736,48 +838,63 @@ class ImpulseGraph(object):
         [((1, 3, 4), 8)]
         """
 
-        if begin is None:
-            inclusive = (True, inclusive[1])
-        if end is None:
-            inclusive = (inclusive[0], True)
+        try:
+            _ = (e for e in u)
+        except TypeError:
+            u = [u]
 
-        if u is None and v is None:
-            # interval filtering
-            if begin is not None and end is not None and begin > end:
-                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
-                                    "begin: {}, end: {}.".format(begin, end))
-            iedges = [iv for iv in self.__search_tree(begin, end, inclusive)]
+        try:
+            _ = (e for e in v)
+        except TypeError:
+            v = [v]
 
-        else:
-            # Node filtering
-            if u is not None and v is not None:
-                if u not in self._adj:
-                    return []
-                if v not in self._adj[u]:
-                    return []
-                iedges = self._adj[u][v]
+        # Return All
+        if u == [None] and v == [None] and begin is None and end is None:
+            iedges = self.__edges_node_first(u, v, begin, end)
 
-            elif u is not None:
-                if u not in self._adj:
-                    return []
-                iedges = [iv for v in self._adj[u] for iv in self._adj[u][v]]
+        # Interval First
+        elif u == [None] and v == [None]:
+            iedges = self.__edges_interval_first(begin, end)
+
+        # Compound
+        elif (u != [None] or v != [None]) and (begin is not None or end is not None) and self._model is not None:
+            if u == [None]:
+                nodes = v
+            elif v == [None]:
+                nodes = u
             else:
-                if v not in self._adj:
-                    return []
-                iedges = [iv for u in self._adj[v] for iv in self._adj[v][u]]
+                nodes = set(*u).union(set(*v))
 
-            # Interval filtering
-            if begin is not None and end is not None and begin > end:
-                raise NetworkXError("IntervalGraph: interval end must be bigger than or equal to begin: "
-                                    "begin: {}, end: {}.".format(begin, end))
-            iedges = [iv for iv in iedges if self.__in_interval(iv[2], begin, end, inclusive=inclusive)]
+            node_percent = len(nodes) / self.number_of_nodes()
 
+            graph_begin, graph_end = self.interval()
+            if begin is None:
+                begin = graph_begin
+            if end is None:
+                end = graph_end
+
+            interval_percent = (end - begin) / (graph_end - graph_begin)
+
+            node_time, interval_time = self._model.predict([(node_percent, interval_percent)])[0]
+
+            if node_time < interval_time:
+                iedges = self.__edges_node_first(u, v, begin, end)
+            else:
+                iedges = [e for e in self.__edges_interval_first(begin, end) if e[0] in nodes or e[1] in nodes]
+
+        # Node First
+        else:
+            iedges = self.__edges_node_first(u, v, begin, end)
+
+        # Appending attribute data if needed
         if data is False:
-            return [edge for edge in iedges]
+            return iedges if isinstance(iedges, list) else list(iedges)
 
         if data is True:
-            return [(edge, self._adj[edge[0]][edge[1]][edge]) for edge in iedges]
-        return [(edge, self._adj[edge[0]][edge[1]][edge][data]) if data in self._adj[edge[0]][edge[1]][edge] else (edge, default) for edge in iedges]
+            return [(iv, self._adj[iv[0]][iv[1]][iv]) for iv in iedges]
+
+        return [(iv, self._adj[iv[0]][iv[1]][iv][data]) if data in self._adj[iv[0]][iv[1]][iv] else (iv, default) for iv
+                in iedges]
 
     def remove_edge(self, u, v, begin=None, end=None, inclusive=(True, False)):
         """Remove the edge between u and v in the impulse graph,
@@ -892,11 +1009,6 @@ class ImpulseGraph(object):
             return len(self.edges(u=node, begin=begin, end=end, inclusive=inclusive))
 
         # delta == True, return list of changes
-        if begin == None:
-            begin = list(self.tree.keys())[0]
-        if end == None:
-            end = list(self.tree.keys())[-1]
-
         d = {}
         output = []
 
@@ -962,8 +1074,8 @@ class ImpulseGraph(object):
                 yield (*edge, begin)
 
         for t in self.tree.irange(begin, end, inclusive=inclusive):
-            for edge in self.tree[t]:
-                yield (*edge, t)
+            for u, v in self.tree[t]:
+                yield (u, v, t)
 
     def __in_interval(self, t, begin, end, inclusive=(True, False)):
         """
@@ -1068,7 +1180,7 @@ class ImpulseGraph(object):
             G = Graph()
 
         if edge_data and edge_timestamp_data:
-            G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[3]))
+            G.add_edges_from((iedge[0], iedge[1], dict(self._adj[iedge[0]][iedge], timestamp=iedge[2]))
                              for iedge in iedges)
         elif edge_data:
             G.add_edges_from((iedge[0], iedge[1], self._adj[iedge[0]][iedge[1]][iedge])
@@ -1085,7 +1197,8 @@ class ImpulseGraph(object):
 
         return G
 
-    def to_snapshots(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False, edge_timestamp_data=False,
+    def to_snapshots(self, number_of_snapshots=False, length_of_snapshots=False, multigraph=False, edge_data=False,
+                     edge_timestamp_data=False,
                      node_data=False, return_length=False):
         """Return a list of networkx Graph or MultiGraph objects as snapshots
         of the impulse graph in consecutive order.
@@ -1253,6 +1366,27 @@ class ImpulseGraph(object):
         return G
 
     @staticmethod
+    def __overlaps_or_contains(iv, begin, end):
+        """Returns True if interval `iv` overlaps with begin and end.
+
+       Parameters
+       ----------
+       iv: Interval
+       begin: int or float
+            Inclusive beginning time of the node appearing in the interval graph.
+        end: int or float
+            Non-inclusive ending time of the node appearing in the interval graph.
+            Must be bigger than or equal begin.
+       """
+        if begin is None and end is None:
+            return True
+        if begin is None:
+            return iv[2] < end
+        if end is None:
+            return iv[2] >= begin
+        return (begin < iv[2] < end and iv[2]) or iv[2] == begin
+
+    @staticmethod
     def from_networkx_graph(graph, timestamp='timestamp'):
         """Convert a NetworkX Graph to a ImpulseGraph.
 
@@ -1292,7 +1426,7 @@ class ImpulseGraph(object):
         return G
 
     @staticmethod
-    def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, order=('u', 'v', 't'), comments="#"):
+    def load_from_txt(path, delimiter=" ", nodetype=int, timestamptype=float, order=('u', 'v', 't'), predict=False, comments="#"):
         """Read impulse graph in from path.
            Timestamps must be integers or floats.
            Nodes can be any hashable objects.
@@ -1312,6 +1446,9 @@ class ImpulseGraph(object):
 
         order : Python 3-tuple, optional (default= ('u', 'v', 't'))
         This must be a 3-tuple containing strings 'u', 'v', and 't'. 'u' specifies the starting node, 'v' the ending node, and 't' the timestamp.
+
+        predict : bool, optional (default= False)
+        If true, calls generate_predictive_model, after graph is created.
 
         comments : string, optional
            Marker for comment lines
@@ -1391,6 +1528,9 @@ class ImpulseGraph(object):
                     raise TypeError("Failed to convert interval time to {}".format(timestamptype))
 
                 G.add_edge(u, v, t, **edgedata)
+
+        if predict is True:
+            G.generate_predictive_model()
 
         return G
 
