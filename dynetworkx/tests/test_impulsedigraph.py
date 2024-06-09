@@ -1,5 +1,4 @@
 import dynetworkx as dnx
-import networkx as nx
 
 
 def test_impulsedigraph_init_default():

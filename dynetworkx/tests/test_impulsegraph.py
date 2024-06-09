@@ -1,8 +1,6 @@
 import dynetworkx as dnx
 import networkx as nx
-from networkx import from_numpy_matrix, from_numpy_array
 import os
-import numpy as np
 
 current_dir = os.path.dirname(__file__)
 
