@@ -23,9 +23,10 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        "networkx",
+        "networkx>=2.0",
         "sortedcontainers",
         "numpy",
+        "scikit-learn",
     ],
     python_requires=">=3.4",
 )
