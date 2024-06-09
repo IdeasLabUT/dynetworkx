@@ -2,15 +2,13 @@ import dynetworkx as dnx
 from networkx.classes.graph import Graph
 from networkx.exception import NetworkXError
 from networkx.classes.multigraph import MultiGraph
-from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
-from sortedcontainers import SortedList, SortedDict
+from networkx.classes.reportviews import NodeDataView
+from sortedcontainers import SortedDict
 import random
 import math
 from timeit import default_timer as timer
 from sklearn.linear_model import LinearRegression
 from itertools import product
-
-from dynetworkx.classes.intervalgraph import IntervalGraph
 
 
 class ImpulseGraph(object):

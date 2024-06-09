@@ -1,7 +1,7 @@
 from networkx.classes.graph import Graph
 import numpy as np
 from networkx import adjacency_matrix, from_numpy_array
-from sortedcontainers import SortedDict, SortedList
+from sortedcontainers import SortedDict
 import copy
 
 
@@ -733,7 +733,7 @@ class SnapshotGraph(object):
          [0 0 0 0 0 0 0]]
 
         """
-        
+
         if sbunch and (start or end):
             raise ValueError('Either sbunch or (start and end) can be specified.')
         elif sbunch:
