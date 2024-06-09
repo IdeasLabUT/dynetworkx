@@ -1,6 +1,6 @@
 import dynetworkx as dnx
 import networkx as nx
-from networkx import from_numpy_matrix, from_numpy_array
+from networkx import from_numpy_array
 import os
 import numpy as np
 
@@ -320,7 +320,7 @@ def test_snapshotgraph_load_from_text_multi():
     desired.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
                   [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=0, end=3)
-    desired.insert(from_numpy_matrix(
+    desired.insert(from_numpy_array(
         np.array([[0, 1, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0],
                   [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1, 0]])), start=3, end=10)
 

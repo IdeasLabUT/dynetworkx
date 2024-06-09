@@ -3,7 +3,7 @@ from networkx.classes.graph import Graph
 from networkx.exception import NetworkXError
 from dynetworkx.classes.intervaltree import IntervalTree
 from networkx.classes.multigraph import MultiGraph
-from networkx.classes.reportviews import NodeView, EdgeView, NodeDataView
+from networkx.classes.reportviews import NodeDataView
 from sortedcontainers import SortedList, SortedDict
 import random
 import math
@@ -775,7 +775,7 @@ class IntervalGraph(object):
         True
 
         With specific overlapping interval:
-        
+
         >>> G.has_edge(1, 2, begin=2)
         True
         >>> G.has_edge(2, 4, begin=12)

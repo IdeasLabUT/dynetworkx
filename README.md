@@ -2,8 +2,7 @@ DyNetworkX
 ==========
 
 DyNetworkX is a Python package for the study of dynamic network analysis (DNA).
-DyNetworkX used to be a fork of `NetworkX <https://networkx.github.io/documentation/stable/index.html>`_
-package. Thus, implementation, documentation and the development of DyNetworkX is heavily
+DyNetworkX used to be a fork of [NetworkX](https://networkx.github.io/documentation/stable/index.html) package. Thus, implementation, documentation and the development of DyNetworkX is heavily
 influenced by NetworkX.
 
 **Documentation:** https://dynetworkx.readthedocs.io/
@@ -21,6 +20,13 @@ The audience for DyNetworkX includes mathematicians, physicists, biologists,
 computer scientists, and social scientists. Overall, everyone interested
 in analyzing dynamic networks.
 
+Install
+-------
+You can install the latest version of DyNetworkX using pip:
+```python
+pip install dynetworkx
+```
+
 Python
 ------
 
@@ -30,12 +36,12 @@ algorithms.  Python has a vibrant and growing ecosystem of packages that
 NetworkX uses to provide more features such as numerical linear algebra and
 drawing.  In order to make the most out of NetworkX you will want to know how
 to write basic programs in Python.  Among the many guides to Python, we
-recommend the `Python documentation <https://docs.python.org/3/>`_.
+recommend the [Python documentation](https://docs.python.org/3/).
 
 License
 -------
 
-Released under the 3-Clause BSD license (see `dydoc/source/license.rst`)::
+Released under the 3-Clause BSD license (see [LICENSE.txt](LICENSE.txt)):
 
    Copyright (C) 2018 IDEASLab @ The University of Toledo.
 

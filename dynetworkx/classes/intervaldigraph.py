@@ -2,10 +2,9 @@ from dynetworkx.classes.intervalgraph import IntervalGraph
 from networkx.classes.digraph import DiGraph
 from networkx.classes.multidigraph import MultiDiGraph
 
-import dynetworkx as dnx
 from networkx.exception import NetworkXError
 from dynetworkx.classes.intervaltree import IntervalTree
-from sortedcontainers import SortedList, SortedDict
+from sortedcontainers import SortedDict
 import random
 import math
 from timeit import default_timer as timer
