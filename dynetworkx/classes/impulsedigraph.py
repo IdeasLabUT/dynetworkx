@@ -334,6 +334,10 @@ class ImpulseDiGraph(ImpulseGraph):
         self._model = model
 
     def __edges_node_first(self, u_list, v_list, begin, end):
+        if not isinstance(u_list, list):
+            u_list = [u_list]
+        if not isinstance(v_list, list):
+            v_list = [v_list]
         # Node filtering
         iedges = set()
         for u, v in product(u_list, v_list):
