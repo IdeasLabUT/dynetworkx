@@ -2,6 +2,8 @@ from networkx import Graph
 import random
 import itertools
 import dynetworkx as dnx
+import pandas as pd
+from collections import OrderedDict
 
 
 def __enumerate_subgraphs(g, size_k):
@@ -53,7 +55,7 @@ def __extend_subgraph(v_subgraph, v_extension, v, g, size_k):
             yield from __extend_subgraph(v_subgraph.copy().union({w}), v2_extension, v, g, size_k)
 
 
-def count_temporal_motif(G, sequence, delta, get_count_dict=False):
+def count_temporal_motif(G, sequence, delta):
     """Count all temporal motifs.
 
     Parameters
@@ -65,12 +67,9 @@ def count_temporal_motif(G, sequence, delta, get_count_dict=False):
 
     delta: time window that specifies the maximum time limit that all edges in a motif must occur within.
 
-    get_count_dict: if True, return the motif count dictionary, which provides greater detail about which
-        motifs appear in a certain type of motif. If False, only returns the total count of all motifs of that type.
-
     Returns
     -------
-    count dictionary or total motif count
+    a tuple containing the following: total motif count; count dictionary; pandas dataframe where the columns are motif positions, indices are nodes, and values are the amount of times the node appears in the motif position
 
     Examples
     --------
@@ -80,11 +79,18 @@ def count_temporal_motif(G, sequence, delta, get_count_dict=False):
     >>> G.add_edge(4, 2, 30)
     >>> G.add_edge(2, 5, 32)
     >>> G.add_edge(2, 5, 33)
-    >>> dnx.count_temporal_motif(G, ((1, 2), (2, 3), (2, 3)), 3)
-    3
-    >>> dnx.count_temporal_motif(G, ((1, 2), (2, 3), (2, 3)), 3, get_count_dict=True)
-    {(1, 2, 2, 5, 2, 5): 1, (4, 2, 2, 5, 2, 5): 1, (3, 2, 2, 5, 2, 5): 1}
+    >>> dnx.count_temporal_motif(G, ((1, 2), (2, 3), (2, 3)))
+    (3, 
+    {(1, 2, 2, 5, 2, 5): 1, (4, 2, 2, 5, 2, 5): 1, (3, 2, 2, 5, 2, 5): 1}, 
+       1  2  3
+    1  1  0  0
+    2  0  3  0
+    3  1  0  0
+    4  1  0  0
+    5  0  0  3)
     """
+
+    # the following section of code is for get_count_dict
     if not isinstance(G, dnx.ImpulseDiGraph):
         raise TypeError('This function only supports ImpulseDiGraph')
 
@@ -161,11 +167,41 @@ def count_temporal_motif(G, sequence, delta, get_count_dict=False):
                             break
                 if isomorphic:
                     total_counts[keys] = counts[keys]
+    # end of code for get_count_dict
 
-    if get_count_dict:
-        return total_counts
-    else:
-        return sum(total_counts.values())
+
+    # the following section of code is for node_participation_per_position
+    
+    # creates list of unique positions
+    positions = []
+    motif = []
+    for pos in sequence: # gathers all positions
+        positions += list(pos)
+    motif = list(OrderedDict.fromkeys(positions)) # removes duplicates from positions (preserving order)
+
+    # creates list of unique nodes
+    nodes = []
+    for key in total_counts: # gathers all nodes
+        nodes += list(key)
+    nodes = sorted(list(set(nodes))) # sorts and gets rid of duplicates
+
+    # creates dataframe where columns = nodes, row indices = position number, and value = number of times each node is at each position
+    nppp = pd.DataFrame(index=nodes, columns=motif) # creates the dataframe
+
+    for col in nppp.columns: # sets all values in the dataframe to 0
+        nppp[col].values[:] = 0
+
+    # calculates the number of times each node appears in each position of the motif
+    new_total_counts = {} # stores same info as total_counts, except keys don't have duplicates (and preserving order)
+    for key in total_counts:
+        new_key = tuple(OrderedDict.fromkeys(key)) # generates new key without duplicates
+        new_total_counts[new_key] = total_counts.get(key) # stores new key and value data in new_total_counts
+        for i in range(len(motif)):
+            nppp.at[new_key[i], motif[i]] += new_total_counts.get(new_key) # calculates number of times each node appears in each position of the motif    
+    # end of code for node_participation_per_position
+
+    
+    return sum(total_counts.values()), total_counts, nppp
 
 
 def __decrement_counts(edges, motif_length, counts):
